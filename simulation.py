@@ -130,151 +130,120 @@ class Simulation():
         self.voting_behavior=voting_behavior
         self.political_engagement=political_engagement
 
-    def simulate(self,n_of_runs):
-        #creating simulation files
-        self.survey.create_csv('./simulations/'+self.filename+'.csv')        
-        data_services.create_demographic_csv('./simulations/'+self.filename+'_demographics.csv')
-        questions=self.survey.to_json()      
-        #simulation loop
+    # To reduce the duplication of similar error handling blocks for parsing demographic data
+    # def handle_error(error_type, error_data, error_list):
+    #     self.n_failure += 1
+    #     self.consecutive_failures += 1
+    #     print(f"An error occurred while {error_type}: {error_data}. Skipping this iteration...")
+    #     if self.consecutive_failures >= 5:
+    #         print("Too many consecutive failures. Stopping the simulation.")
+    #         data_services.clean_up_csv('./simulations/'+self.filename+'.csv')
+    #         data_services.clean_up_csv('./simulations/'+self.filename+'_demographics.csv')
+    #         return True  # Indicate simulation should stop
+    #     return False
+
+    def simulate(self, n_of_runs):
+        # Creating simulation files
+        self.survey.create_csv('./simulations/' + self.filename + '.csv')
+        data_services.create_demographic_csv('./simulations/' + self.filename + '_demographics.csv')
+        questions = self.survey.to_json()
+
+        # Simulation loop
         while True:
             if self.n_success >= n_of_runs:
                 break
             try:
                 for i in range(n_of_runs - self.n_success):
-                    
-                    #creating demographic profile
                     try:
-                        demo=demgen.generate_demographic(gender_identity=self.gender_identity, age=self.age, date_of_birth=self.date_of_birth,
-                                    marital_status=self.marital_status, sexual_orientation=self.sexual_orientation, nationality=self.nationality, citizenship=self.citizenship,
-                                    country_of_residence=self.country_of_residence, state_province=self.state_province, city=self.citizenship,
-                                    rural_or_urban=self.rural_or_urban, type_of_residence=self.type_of_residence, length_of_residence=self.length_of_residence,
-                                    level_of_education=self.level_of_education, field_of_study=self.field_of_study, occupation=self.occupation, income_level=self.income_level,
-                                    social_class=self.social_class, employment_status=self.employment_status, home_ownership=self.home_ownership, ethnicity=self.ethnicity,
-                                    languages_spoken=self.languages_spoken, religion=self.religion, cultural_practices=self.cultural_practices,
-                                    immigration_status=self.immigration_status, hobbies_and_interests=self.hobbies_and_interests, shopping_preferences=self.shopping_preferences,
-                                    dietary_preferences=self.dietary_preferences, physical_activity_levels=self.physical_activity_levels, social_media_usage=self.social_media_usage,
-                                    travel_habits=self.travel_habits, alcohol_tobacco_use=self.alcohol_tobacco_use, technology_usage=self.technology_usage,
-                                    family_structure=self.family_structure, household_size=self.household_size, pet_ownership=self.pet_ownership,
-                                    relationship_status=self.relationship_status, caregiving_responsibilities=self.caregiving_responsibilities,
-                                    general_health_status=self.general_health_status, disabilities_or_chronic_illnesses=self.disabilities_or_chronic_illnesses,
-                                    mental_health_status=self.mental_health_status, health_insurance_status=self.health_insurance_status,
-                                    access_to_healthcare=self.access_to_healthcare, political_affiliation=self.political_affiliation, voting_behavior=self.voting_behavior,
-                                    political_engagement=self.political_engagement)
-                        self.raw_demographics.append(demo)
-                        demo_json=data_services.extract_json_content(demo)
+                        demo = demgen.generate_demographic(gender_identity=self.gender_identity, age=self.age,
+                                                           date_of_birth=self.date_of_birth,
+                                                           marital_status=self.marital_status,
+                                                           sexual_orientation=self.sexual_orientation,
+                                                           nationality=self.nationality, citizenship=self.citizenship,
+                                                           country_of_residence=self.country_of_residence,
+                                                           state_province=self.state_province, city=self.citizenship,
+                                                           rural_or_urban=self.rural_or_urban,
+                                                           type_of_residence=self.type_of_residence,
+                                                           length_of_residence=self.length_of_residence,
+                                                           level_of_education=self.level_of_education,
+                                                           field_of_study=self.field_of_study,
+                                                           occupation=self.occupation,
+                                                           income_level=self.income_level,
+                                                           social_class=self.social_class,
+                                                           employment_status=self.employment_status,
+                                                           home_ownership=self.home_ownership, ethnicity=self.ethnicity,
+                                                           languages_spoken=self.languages_spoken,
+                                                           religion=self.religion,
+                                                           cultural_practices=self.cultural_practices,
+                                                           immigration_status=self.immigration_status,
+                                                           hobbies_and_interests=self.hobbies_and_interests,
+                                                           shopping_preferences=self.shopping_preferences,
+                                                           dietary_preferences=self.dietary_preferences,
+                                                           physical_activity_levels=self.physical_activity_levels,
+                                                           social_media_usage=self.social_media_usage,
+                                                           travel_habits=self.travel_habits,
+                                                           alcohol_tobacco_use=self.alcohol_tobacco_use,
+                                                           technology_usage=self.technology_usage,
+                                                           family_structure=self.family_structure,
+                                                           household_size=self.household_size,
+                                                           pet_ownership=self.pet_ownership,
+                                                           relationship_status=self.relationship_status,
+                                                           caregiving_responsibilities=self.caregiving_responsibilities,
+                                                           general_health_status=self.general_health_status,
+                                                           disabilities_or_chronic_illnesses=self.disabilities_or_chronic_illnesses,
+                                                           mental_health_status=self.mental_health_status,
+                                                           health_insurance_status=self.health_insurance_status,
+                                                           access_to_healthcare=self.access_to_healthcare,
+                                                           political_affiliation=self.political_affiliation,
+                                                           voting_behavior=self.voting_behavior,
+                                                           political_engagement=self.political_engagement)
+                        demo_json = data_services.extract_json_content(demo)
+                        demo_data = json.loads(demo_json)
+
+                        respondant = agent.Agent(demo_json)
+                        response = respondant.chat(questions)
+                        response_json = data_services.extract_json_content(response)
+                        response_data = json.loads(response_json)
+
+                        # Appending data
+                        self.raw_demographics.append(demo_data)
+                        self.raw_responses.append(response_data)
+
+                        # Recording successful run
+                        self.n_success += 1
+                        self.consecutive_failures = 0  # reset the consecutive failures counter
+                        print("Demographic and response data successfully appended")
+
+                        if self.n_success >= n_of_runs:
+                            print(f"Simulation Complete")
+                            break
+
                     except Exception as e:
-                        self.n_failure+=1
+                        self.n_failure += 1
                         self.consecutive_failures += 1
-                        print(f"An error occurred while generating demographic data: {e}. Skipping this iteration...")
+                        print(f"An error occurred: {e}. Skipping this iteration...")
+
                         if self.consecutive_failures >= 5:
                             print("Too many consecutive failures. Stopping the simulation.")
-                            data_services.clean_up_csv('./simulations/'+self.filename+'.csv')
-                            data_services.clean_up_csv('./simulations/'+self.filename+'_demographics.csv')
-                            return
-                        continue
+                            break
 
-                    try:
-                        demo_data=json.loads(demo_json)
-                    except Exception as e:
-                        self.demographic_error.append(demo_json)
-                        self.n_failure+=1
-                        self.consecutive_failures += 1
-                        print(f"An error occurred while parsing demographic data: {e}. Skipping this iteration...")
-                        if self.consecutive_failures >= 5:
-                            print("Too many consecutive failures. Stopping the simulation.")
-                            data_services.clean_up_csv('./simulations/'+self.filename+'.csv')
-                            data_services.clean_up_csv('./simulations/'+self.filename+'_demographics.csv')
-                            return
-                        continue
-
-                    #simulating survey response
-                    respondant=agent.Agent(demo_json)
-                    try:
-                        response=respondant.chat(questions)
-                        self.raw_responses.append(response)
-                        response_json=data_services.extract_json_content(response)
-                    except Exception as e:
-                        self.n_failure+=1
-                        self.consecutive_failures += 1
-                        print(f"An error occurred while simulating survey response: {e}. Skipping this iteration...")
-                        if self.consecutive_failures >= 5:
-                            print("Too many consecutive failures. Stopping the simulation.")
-                            data_services.clean_up_csv('./simulations/'+self.filename+'.csv')
-                            data_services.clean_up_csv('./simulations/'+self.filename+'_demographics.csv')
-                            return
-                        continue
-
-
-                    try:
-                        response_data=json.loads(response_json)
-                    except Exception as e:
-                        self.response_error.append(response_json)
-                        self.n_failure+=1
-                        self.consecutive_failures += 1
-                        print(f"An error occurred while parsing response data: {e}. Skipping this iteration...")
-                        if self.consecutive_failures >= 5:
-                            print("Too many consecutive failures. Stopping the simulation.")
-                            data_services.clean_up_csv('./simulations/'+self.filename+'.csv')
-                            data_services.clean_up_csv('./simulations/'+self.filename+'_demographics.csv')
-                            return
-                        continue
-
-                    #appending data
-                    try:
-                        data_services.append_response('./simulations/'+self.filename+'.csv',response_data)
-                    except Exception as e:
-                        self.n_failure+=1
-                        self.response_error.append(response_json)
-                        self.consecutive_failures += 1
-                        print(f"An error occurred while appending response data: {e}. Skipping this iteration...")
-                        if self.consecutive_failures >= 5:
-                            print("Too many consecutive failures. Stopping the simulation.")
-                            data_services.clean_up_csv('./simulations/'+self.filename+'.csv')
-                            data_services.clean_up_csv('./simulations/'+self.filename+'_demographics.csv')
-                            return
-                        continue  
-
-                    try:
-                        data_services.append_demographic('./simulations/'+self.filename+'_demographics.csv',demo_data)
-                    except Exception as e:
-                        self.n_failure+=1
-                        self.demographic_error.append(demo_json)
-                        self.consecutive_failures += 1
-                        print(f"An error occurred while appending demographic data: {e}. Skipping this iteration...")
-                        if self.consecutive_failures >= 5:
-                            print("Too many consecutive failures. Stopping the simulation.")
-                            data_services.clean_up_csv('./simulations/'+self.filename+'.csv')
-                            data_services.clean_up_csv('./simulations/'+self.filename+'_demographics.csv')
-                            return
-                        continue  
-
-                    #recording successful run
-                    self.n_success += 1  
-                    self.consecutive_failures = 0  # reset the consecutive failures counter
-                    print("Demographic and response data successfully appended")
-                    if self.n_success >= n_of_runs:
-                        data_services.clean_up_csv('./simulations/'+self.filename+'.csv')
-                        data_services.clean_up_csv('./simulations/'+self.filename+'_demographics.csv')
-                        print(f"Simulation Complete")
-                        break
-
-                #indicating simulation completion
+                # Indicating simulation completion
                 if self.n_success >= n_of_runs:
                     print(f"Simulation Complete")
-                    data_services.clean_up_csv('./simulations/'+self.filename+'.csv')
-                    data_services.clean_up_csv('./simulations/'+self.filename+'_demographics.csv')
-                    break  
+                    break
 
-            #returning general error
             except Exception as e:
-                self.n_failure+=1
+                self.n_failure += 1
                 self.consecutive_failures += 1
                 print(f"An unknown error occurred: {e}. Retrying...")
+
                 if self.consecutive_failures >= 5:
-                    data_services.clean_up_csv('./simulations/'+self.filename+'.csv')
-                    data_services.clean_up_csv('./simulations/'+self.filename+'_demographics.csv')
                     print("Too many consecutive failures. Stopping the simulation.")
-                    return
+                    break
+
+        # Clean up after simulation completes
+        data_services.clean_up_csv('./simulations/' + self.filename + '.csv')
+        data_services.clean_up_csv('./simulations/' + self.filename + '_demographics.csv')
 
 
     def show_performance(self):
