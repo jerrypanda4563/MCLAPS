@@ -15,7 +15,7 @@ def extract_json_content(s):
 
 def create_demographic_csv(filename, columns=[
     "Gender Identity", "Age", "Date of Birth", "Marital Status", "Sexual Orientation", 
-    "Nationality", "Citizenship", "Country of Residence", "State/Province", "City",
+    "Nationality", "Country of Residence", "State/Province", "City",
     "Rural or Urban", "Type of Residence", "Length of Residence", "Level of Education", 
     "Field of Study", "Occupation", "Income Level", "Social Class", "Employment Status", 
     "Home Ownership", "Ethnicity", "Language(s) Spoken", "Religion", "Cultural Practices",
@@ -32,16 +32,12 @@ def create_demographic_csv(filename, columns=[
         writer = csv.writer(file)
         writer.writerow(columns)
 
+#modified to accomodate for new demgen data output structure (append key values in a single dictionary)
 def append_demographic(filename, data):
     # Check if directory exists
     directory = os.path.dirname(filename)
     if not os.path.exists(directory):
         return f"Error: The directory {directory} does not exist."
-
-    # Merge the list of dictionaries into one dictionary
-    data_dict = {}
-    for item in data:
-        data_dict.update(item)
 
     # Get the column names from the CSV file
     with open(filename, 'r', newline='') as file:
@@ -53,7 +49,7 @@ def append_demographic(filename, data):
         writer = csv.DictWriter(file, fieldnames=fieldnames)
 
         # Write the data to the CSV file
-        writer.writerow(data_dict)
+        writer.writerow(data)
 
 def append_response(filename, data):
     # Check if file exists
