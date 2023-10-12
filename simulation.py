@@ -5,7 +5,7 @@ import json
 
 ### class simulate implementing exception handling, creates a single instances of demo and agent, input is survey plus all dem param
 class simulate():
-    def __init__(self, survey: list, 
+    def __init__(self, survey: list, context=None,
                  gender_identity=None, age=None, date_of_birth=None,
                 marital_status=None, sexual_orientation=None, nationality=None, citizenship=None,
                 country_of_residence=None, state_province=None, city=None,
@@ -24,6 +24,7 @@ class simulate():
                 political_engagement=None):
         #input
         self.survey=survey  #must be a list of dict
+        self.survey_context=context #str
         #temp memory for storing output
         self.demographic_data={}
         self.responses=[]
@@ -164,9 +165,12 @@ class simulate():
             return
         #End of block
 
-
+        #initiating simulation agent
         simulator = agent.Agent("You are a person with the following demographic characteristics expressed as a json dictionary:" + demo + "\nRespond to the following survey questions expressed as a list of json dictionaries by replacing null values with your answer. Your output must maintain the same data structure as the input.")
-
+        if isinstance(self.survey_context,str):
+            simulator.inject_memory(self.survey_context)
+        
+        #iterating through questions list
         for question in self.survey:
             prompt = json.dumps(question)
 

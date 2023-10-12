@@ -117,7 +117,7 @@ class Agent:
     
     def generate_response(self, input_prompt):
         completion=openai.ChatCompletion.create(
-                  model="gpt-3.5-turbo",
+                  model="gpt-3.5-turbo-16k",
                   messages=[
                         {"role": "system", "content": self.character+"\nContextual memory:"+self.memory},
                         {"role": "user", "content":input_prompt},

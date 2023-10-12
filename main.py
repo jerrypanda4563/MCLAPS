@@ -9,11 +9,15 @@ import concurrent.futures
 
 
 #global variables
+# class data_var:
+#     def __init__(self):
 survey_array = {
-                "survey_name":"",
-                "survey_questions":None
-                }
+"survey_name":"",
+"survey_questions":None
+}
 demographic_parameters = {}
+survey_description=None
+
 
 
 #command line callables
@@ -88,6 +92,10 @@ def create_survey(survey_name:str):
     survey_array["survey_questions"]=survey.Survey()
     return survey_array
 
+def post_survey_description(description:str):
+    global survey_description
+    survey_description=description
+
 def post_short_answer_question(ques:str):
     global survey_array
     if survey_array:
@@ -133,12 +141,14 @@ def get_simulation_data(n_of_results: int):
 
     global survey_array
     global demographic_parameters
+    global survey_description
 
     def run_single_simulation():
         global survey_array
         global demographic_parameters
+        global survey_description
         try:
-            inst = simulation.simulate(survey=survey_array['survey_questions'].show())
+            inst = simulation.simulate(survey=survey_array['survey_questions'].show(),context=survey_description)
             inst.update_demographic_parameters(demographic_parameters)
             inst.run()
             simulation_data={
@@ -160,7 +170,7 @@ def get_simulation_data(n_of_results: int):
     retries = 0
 
     while n_of_successful_runs < n_of_results and retries < max_retries:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:  # using 5 threads, but adjust as needed
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:  # using 4 threads, but adjust as needed
             future_to_simulation = {executor.submit(run_single_simulation): _ for _ in range(n_of_results - n_of_successful_runs)}
             
             for future in concurrent.futures.as_completed(future_to_simulation):
@@ -176,8 +186,6 @@ def get_simulation_data(n_of_results: int):
             print(f"After {retries} retries, {n_of_successful_runs} simulations completed successfully. Retrying the remaining simulations...")
 
     print(f"Successfully simulated {n_of_successful_runs} out of {n_of_results}.")
-
-
 
 
 
