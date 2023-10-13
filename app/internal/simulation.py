@@ -1,6 +1,4 @@
-import agent
-import data_services
-import demgen
+from app.internal import agent, demgen
 import json
 
 

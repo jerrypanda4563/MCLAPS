@@ -1,6 +1,5 @@
-import demgen
-import main
-import survey
+from app import main
+from app.internal import demgen, survey
 
 
 # comment: survey specifics still require optimization, output still as default into simulation folder in csv.

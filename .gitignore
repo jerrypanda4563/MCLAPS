@@ -2,3 +2,5 @@ OPEN_AI_KEY_local.txt
 OPEN_AI_KEY.txt
 *.csv
 .idea
+.pytest_cache
+app/tests/.pytest_cache

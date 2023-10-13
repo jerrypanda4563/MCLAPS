@@ -1,15 +1,10 @@
 import traceback
 
-import demgen
-import survey
-import simulation
-import data_services
+from app.internal import demgen, data_services, terminal, survey, simulation
 import concurrent
-from typing import Dict, Any, Optional, Union, List
+from typing import Any, Optional
 from typing import List
 import concurrent.futures
-
-import terminal
 
 # global variables
 # class data_var:
