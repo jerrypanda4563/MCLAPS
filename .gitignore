@@ -3,4 +3,4 @@ OPEN_AI_KEY.txt
 *.csv
 .idea
 .pytest_cache
-app/tests/.pytest_cache
+tests/.pytest_cache
