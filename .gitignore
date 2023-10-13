@@ -4,3 +4,4 @@ OPEN_AI_KEY.txt
 .idea
 .pytest_cache
 tests/.pytest_cache
+.env

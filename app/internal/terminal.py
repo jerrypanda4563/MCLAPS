@@ -1,5 +1,6 @@
 from app import main
 from app.internal import demgen, survey
+from app.internal import simulation_runner as runner
 
 
 # comment: survey specifics still require optimization, output still as default into simulation folder in csv.
@@ -59,7 +60,7 @@ def pricing_simulation(n, v_age: str = '20-40', v_country_of_residence: str = "U
         social_media_usage='Moderate to high',
         general_health_status='Good to excellent',
     )
-    main.get_simulation_data(n, s, demo, s.description)
+    runner.get_simulation_data(n, s, demo, s.description)
 
 
 def ev_consumer_sentiment_survey(n, v_age: str = '18-65', v_country_of_residence: str = "United Kingdom",
@@ -112,7 +113,7 @@ def ev_consumer_sentiment_survey(n, v_age: str = '18-65', v_country_of_residence
         income_level=v_income_level,  # variable
         social_media_usage='Moderate to high',
     )
-    main.get_simulation_data(n, s, demo, s.description)
+    runner.get_simulation_data(n, s, demo, s.description)
 
 
 def online_shopping_behavior_survey(n, v_age: str = '18-65', v_country_of_residence: str = "Belgium",
@@ -164,4 +165,4 @@ def online_shopping_behavior_survey(n, v_age: str = '18-65', v_country_of_reside
         shopping_preferences="Online shopping",
         social_media_usage='Moderate to high',
     )
-    main.get_simulation_data(n, s, demo, s.description)
+    runner.get_simulation_data(n, s, demo, s.description)

@@ -1,8 +1,9 @@
 import openai
 import json
 
-with open("OPEN_AI_KEY.txt", "r") as file:
-    openai.api_key = file.readline().strip()
+import settings
+
+openai.api_key = settings.OPEN_AI_KEY
 
 
 class Demographic:
