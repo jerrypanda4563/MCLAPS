@@ -1,3 +1,4 @@
 OPEN_AI_KEY_local.txt
 OPEN_AI_KEY.txt
 *.csv
+.idea
