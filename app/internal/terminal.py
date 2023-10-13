@@ -55,6 +55,7 @@ def pricing_simulation(n, v_age: str = '20-40', v_country_of_residence: str = "U
     demo = demgen.Demographic(
         age=v_age,  # variable
         income_level=v_income_level,
+        country_of_residence=v_country_of_residence,
         hobbies_and_interests='Interest in fitness, wellness, and technology',
         physical_activity_levels='Moderate to high',
         social_media_usage='Moderate to high',

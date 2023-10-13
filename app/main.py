@@ -1,6 +1,5 @@
 from app.internal import demgen, terminal, survey
 from fastapi import FastAPI
-
 from app.internal import simulation_runner as runner
 
 app = FastAPI()
@@ -10,6 +9,20 @@ app = FastAPI()
 async def root():
     return {"message": "Hello World"}
 
+
+@app.get("/simulations/pricing")
+async def root(request_id: str, runs: int, age: str, country_of_residence, income_level: str):
+    # do data validation
+
+    # run the simulation async
+
+    # get the output of the simulation to bubble
+
+    # ideally just do data validation, send the request to queue and have a different service process them
+
+
+
+    return {"message": "Hello World"}
 
 def price_simulation(age: int, demographic: map, prompt: str):
     # fill the survey
