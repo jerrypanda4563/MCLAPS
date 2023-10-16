@@ -1,0 +1,25 @@
+services:
+
+  web:
+    build: .
+    ports:
+      - 8004:8000
+    command: uvicorn app.main:app --host 0.0.0.0
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+
+#  worker:
+#    build: .
+#    command: celery --app app.worker.tasks.cel worker -E --concurrency=1 --loglevel=DEBUG --uid=nobody --autoscale 10
+#    environment:
+#      - CELERY_BROKER_URL=redis://redis:6379/0
+#      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+#    depends_on:
+#      - web
+#      - redis
+
+  redis:
+    image: redis:latest

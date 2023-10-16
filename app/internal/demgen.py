@@ -1,7 +1,7 @@
 import openai
 import json
 
-import settings
+from app import settings
 
 openai.api_key = settings.OPEN_AI_KEY
 

@@ -1,12 +1,8 @@
-import numpy as np
 import openai
-import random
-import pandas as pd
 #import tiktoken
-import seaborn as sns
 from sklearn.metrics.pairwise import cosine_similarity
 
-import settings
+from app import settings
 
 openai.api_key = settings.OPEN_AI_KEY
 
