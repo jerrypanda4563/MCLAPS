@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: main-api
+    region: frankfurt
+    plan: free
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --reload"
+    autoDeploy: false
