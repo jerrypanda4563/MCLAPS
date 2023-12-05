@@ -1,14 +1,10 @@
-import numpy as np
 import openai
-import random
-import pandas as pd
-import os
-import csv
-import seaborn as sns
+#import tiktoken
 from sklearn.metrics.pairwise import cosine_similarity
 
-with open("OPEN_AI_KEY.txt", "r") as file:
-    openai.api_key = file.readline().strip()
+from app import settings
+
+openai.api_key = settings.OPEN_AI_KEY
 
 
 class VectorDataFrame:
@@ -46,13 +42,20 @@ class VectorDataFrame:
         for index, vector in enumerate(self.data):
             if vector:
                 similarity_score = cosine_similarity([input_vector], [vector])[0][0]
-                similarity_scores.append((index, similarity_score))
+                # Only consider scores greater than or equal to 0.2
+                if similarity_score >= 0.2:
+                    similarity_scores.append((index, similarity_score))
         
+        # If all similarity scores are below 0.2, return an empty list
+        if not similarity_scores:
+            return []
+
+        # Sort and get the top 5 similar vectors
         similarity_scores.sort(key=lambda x: x[1], reverse=True)
-        top_2_indices = [index for index, _ in similarity_scores[:2] if self.data[index]]
+        top_indices = [index for index, _ in similarity_scores[:5] if self.data[index]]
         
-        return top_2_indices
-    
+        return top_indices
+        
     def query_recent(self):
         recent_entries = [index for index, vector in enumerate(self.data[self.latest_index - 1::-1]) if vector]
         return recent_entries[:2]     
@@ -78,8 +81,8 @@ class StringDataFrame:
 class Agent:
         
     def __init__(self,character):
-        self.string_db = StringDataFrame()  # String database
-        self.vector_db = VectorDataFrame()  # Vector database
+        self.string_db = StringDataFrame()  # Initialize String database
+        self.vector_db = VectorDataFrame()  # Initialize Vector database
         self.memory = ""
         self.prompt = ""
         self.character=character
@@ -92,32 +95,33 @@ class Agent:
         embedding = response['data'][0]['embedding']
         return embedding
     
+    #retrieve strings and vector similarity search merged into one function
     def semantic_search(self, vector):
         # Query the vector database using the VectorDataFrame class for similar vector embeddings
         top_indices = self.vector_db.query(vector)
-        return top_indices
-    
-    def retrieve_strings(self, indices):
-        # Query the string database using the StringDataFrame class for strings with given indices
+        recent_indices = self.vector_db.query_recent()
+        indices=top_indices+recent_indices
         retrieved_strings = self.string_db.query(indices)
         return retrieved_strings
+    
     
     def create_memory(self, retrieved_strings):
         self.memory = " ".join(retrieved_strings)
     
     def create_input_prompt(self):
-        input_prompt = self.memory + "\n" + self.prompt
+        input_prompt =  self.prompt  #memory removed from user prompt into system prompt
         return input_prompt
     
     def generate_response(self, input_prompt):
         completion=openai.ChatCompletion.create(
-                  model="gpt-4",
+                  model="gpt-3.5-turbo-1106",
+                  response_format={"type": "json_object"},
                   messages=[
-                        {"role": "system", "content": self.character},
+                        {"role": "system", "content": "Imagine you are the following person:" + self.character + "\nContextual memory:"+self.memory},
                         {"role": "user", "content":input_prompt},
                     ],
                   temperature=1.2,
-                  max_tokens=4096,
+                  max_tokens=1024,
                   n=1  
                 )
         response=completion.choices[0].message.content
@@ -133,16 +137,15 @@ class Agent:
         
         #semantic search
         embedded_prompt = self.embed(prompt)
-        top_indices = self.semantic_search(embedded_prompt)
-        retrieved_strings = self.retrieve_strings(top_indices)
-        self.create_memory(retrieved_strings)
+        memory = self.semantic_search(embedded_prompt)
+        self.create_memory(memory)
         
         #LLM call
-        input_prompt = self.create_input_prompt()
-        response = self.generate_response(input_prompt)
+        input = self.create_input_prompt()
+        response = self.generate_response(input_prompt=input)
         
         #Creating long-term memory
-        new_string = prompt + "\n" + response
+        new_string = response  #prompt removed from memory creation
         self.string_db.add(new_string)
         
         embedded_string = self.embed(new_string)
@@ -150,3 +153,35 @@ class Agent:
         
         return response
 
+
+#test code comments: modification complete without any bugs, memory capacity increased to 5 prior response plus 2 most recent
+#hotel_a = {
+#    "name": "London Luxury Hotel",
+#    "location": "London, UK",
+#    "address": "123 Main Street, London",
+#    "phone": "+44 20 1234 5678",
+#    "email": "info@londonluxuryhotel.com",
+#    "website": "https://www.londonluxuryhotel.com",
+#    "rating": 4.5,
+#    "wifi": True,
+#    "gym": True,
+#    "pool": False,
+#    "restaurant": True,
+#    "room_types": ["Single", "Double", "Suite"],
+#    "room_rates": [100, 150, 250],
+#    "description": "The London Luxury Hotel offers premium accommodation in the heart of London, with luxurious amenities and excellent service. Our hotel features a fully-equipped gym, a fine-dining restaurant, and spacious rooms with high-speed WiFi and comfortable bedding. Whether you're here for business or pleasure, the London Luxury Hotel is the perfect choice for your stay in London."
+#}
+
+#hotel_a_list = [(key, value) for key, value in hotel_a.items()]
+#testbot=Agent("hotel conceirge")
+#for i in hotel_a_list:
+#    testbot.inject_memory(str(i))
+#testbot.chat("where is the hotel")
+#testbot.chat("Whats the address?")
+#testbot.chat("amenities?")
+# testbot.chat("I have a complaint")
+# testbot.chat("I dont have wifi")
+# testbot.chat("can you give me the password")
+# testbot.chat("fine, i want to take a dip in the pool")
+# testbot.chat("fuck you")
+# print("Hi Simon \n How are you today")

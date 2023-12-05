@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - 8004:80  # changed to match Dockerfile EXPOSE
+    command: uvicorn app.main:app --host 0.0.0.0 --port 80  # updated port to 80
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    command: celery --app app.internal.celery worker --loglevel=info # Update this path to your Celery app instance
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+
+  redis:
+    image: "redis"
+    ports:
+      - "6379:6379"
+
