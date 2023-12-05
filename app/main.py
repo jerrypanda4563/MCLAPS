@@ -1,27 +1,332 @@
-from app.internal import terminal
-from fastapi import FastAPI, BackgroundTasks
+from app.internal import simulation_runner as runner
+from app.internal import data_services
+import app.redis_config as redis_config
+import app.mongo_config as mongo_config
+from app.redis_config import cache
+import app.mongo_config as mongo_db
+
+from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi.responses import FileResponse
+import os
+from pydantic import BaseModel, Field, validator
+
+
+from typing import List, Dict, Type, Optional, Union
 import uuid
+import json
+
+
 
 app = FastAPI()
 
+#Demographic validation model
+class DemographicModel(BaseModel):
+    gender_identity: Optional[str] = None
+    age: Optional[str] = None
+    marital_status: Optional[str] = None
+    sexual_orientation: Optional[str] = None
+    nationality: Optional[str] = None
+    country_of_residence: Optional[str] = None
+    state_province: Optional[str] = None
+    city: Optional[str] = None
+    rural_or_urban: Optional[str] = None
+    type_of_residence: Optional[str] = None
+    length_of_residence: Optional[str] = None
+    level_of_education: Optional[str] = None
+    field_of_study: Optional[str] = None
+    occupation: Optional[str] = None
+    income_level: Optional[str] = None
+    social_class: Optional[str] = None
+    employment_status: Optional[str] = None
+    home_ownership: Optional[str] = None
+    ethnicity: Optional[str] = None
+    languages_spoken: Optional[str] = None
+    religion: Optional[str] = None
+    cultural_practices: Optional[str] = None
+    immigration_status: Optional[str] = None
+    hobbies_and_interests: Optional[str] = None
+    shopping_preferences: Optional[str] = None
+    dietary_preferences: Optional[str] = None
+    physical_activity_levels: Optional[str] = None
+    social_media_usage: Optional[str] = None
+    travel_habits: Optional[str] = None
+    alcohol_tobacco_use: Optional[str] = None
+    technology_usage: Optional[str] = None
+    family_structure: Optional[str] = None
+    household_size: Optional[str] = None
+    pet_ownership: Optional[str] = None
+    relationship_status: Optional[str] = None
+    caregiving_responsibilities: Optional[str] = None
+    general_health_status: Optional[str] = None
+    disabilities_or_chronic_illnesses: Optional[str] = None
+    mental_health_status: Optional[str] = None
+    health_insurance_status: Optional[str] = None
+    access_to_healthcare: Optional[str] = None
+    political_affiliation: Optional[str] = None
+    voting_behavior: Optional[str] = None
+    political_engagement: Optional[str] = None
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
+    class Config:
+        extra = "forbid"  # Forbids any extra fields not defined in the model
+
+#survey validation model
+class ShortAnswerQuestion(BaseModel):
+    type: str = Field("short answer", const=True)
+    question: str
+    answer: Optional[str] = None
+
+class LongAnswerQuestion(BaseModel):
+    type: str = Field("long answer", const=True)
+    question: str
+    answer: Optional[str] = None
+
+class MultipleChoiceQuestion(BaseModel):
+    type: str = Field("multiple choice", const=True)
+    question: str
+    choices: List[str]
+    answer: Optional[str] = None
+
+class CheckboxesQuestion(BaseModel):
+    type: str = Field("checkboxes", const=True)
+    question: str
+    choices: List[str]
+    answer: Optional[List[str]] = None
+
+class LinearScaleQuestion(BaseModel):
+    type: str = Field("linear scale", const=True)
+    question: str
+    min_value: int
+    max_value: int
+    answer: Optional[int] = None
+
+class SurveyModel(BaseModel):
+    name: str
+    description: Optional[str] = None
+    questions: List[Union[ShortAnswerQuestion, LongAnswerQuestion, MultipleChoiceQuestion, CheckboxesQuestion, LinearScaleQuestion]]
+
+    @validator('questions', each_item=True)
+    def check_question_type(cls, v):
+        if v.type not in ["short answer", "long answer", "multiple choice", "checkboxes", "linear scale"]:
+            raise ValueError('Invalid question type')
+        return v
+###
+
+##core functions
+def check_existence(survey_id: str) -> bool:
+    try:
+        cache_existence=cache.exists(survey_id)
+        if cache_existence:
+            return True
+        
+        db_existence=mongo_db.collection_simulations.find_one({"_id": survey_id})
+        if db_existence:
+            return True
+    except redis_config.redis.RedisError as e:
+        print(f"Redis error: {e}")
+    except mongo_config.PyMongoError as e:
+        print(f"MongoDB error: {e}")
+        
+        return False
 
 
-@app.get("/simulations/pricing")
-async def root(runs: int, age: str, country_of_residence, income_level: str,
-               background_tasks: BackgroundTasks):
+    raise HTTPException(status_code=500, detail="Error checking survey status.") 
+
+def check_completion(survey_id: str) -> bool:
+    if check_existence(survey_id) is True:
+        
+        try:
+            cache_completion=cache.hget(survey_id, "Simulation Status")
+            if cache_completion.decode('utf-8').lower() == 'true':
+                return True
+            db_completion=mongo_db.collection_simulations.find_one({"_id": survey_id})
+            if db_completion and db_completion.get("Simulation Status", "").lower() == 'true':
+                return True
+            return False
+        except redis_config.redis.RedisError as e:
+            print(f"Redis error: {e}")
+        except mongo_config.PyMongoError as e:
+                print(f"MongoDB error: {e}") 
+        except Exception:
+            try: 
+                db_completion=mongo_db.collection_simulations.find_one({"_id": survey_id})
+                if db_completion and db_completion.get("Simulation Status", "").lower() == 'true':
+                    return True
+                return False
+            except mongo_config.PyMongoError as e:
+                print(f"MongoDB error: {e}")
+            
+        
+        
+        raise HTTPException(status_code=500, detail="Error checking survey status.") 
     
-    random_uuid = str(uuid.uuid4())
-    # do data validation
-    # background_tasks.add_task(terminal.pricing_simulation, runs, age, country_of_residence, income_level)
-    # run the simulation async
+    else:
+        raise HTTPException(status_code=404, detail=f"Simulation with ID {survey_id} doesn't exist, please create simulation first.")
 
-    # get the output of the simulation to bubble
 
-    # ideally just do data validation, send the request to queue and have a different service process them
+def mongo_load_simulation(sim_id:str) -> bool:
+    try:
+        if check_existence(sim_id) is False:
+            raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
+        
+        mongo_data = mongo_db.collection_simulations.find_one({"_id": sim_id})
+        # Iterate over the fields and store them in Redis
+        for key, value in mongo_data.items():
+            if key in ["Survey Questions", "Target Demographic", "Simulation Result"]:
+                # Serialize lists and dicts as JSON
+                cache.hset(sim_id, key, json.dumps(value))
+            else:
+                # Store other data types as strings
+                cache.hset(sim_id, key, str(value))
 
-    return {"request-id": random_uuid, "status":"pending"}
+        print(f"Data loaded into Redis for sim_id: {sim_id}")
+        return True
+
+    except Exception as e:
+        print(f"Error loading data from MongoDB to Redis: {e}")
+        return False
+
+
+
+#endpoints
+
+@app.post("/survey/new_survey")
+async def create_survey(survey_model: SurveyModel, demographic_model: DemographicModel):
+    survey_id = str(uuid.uuid4()) 
+    survey_questions = [question.json() for question in survey_model.questions]
+    try:
+        cache.hset(survey_id, "Survey Name", survey_model.name)
+        cache.hset(survey_id, "Survey Description", survey_model.description)
+        cache.hset(survey_id, "Survey Questions", json.dumps(survey_questions))
+        cache.hset(survey_id, "Target Demographic", json.dumps(demographic_model.json()))
+    except Exception as e:
+        print({e})
+        raise HTTPException(status_code=400, detail=f"Failed to create survey: {e}")
+    
+    data={
+        **{"_id":survey_id},
+        **cache.hgetall(survey_id)
+    }
+    return data ### json for creating new Simulation File in Bubble
+
+
+@app.post("/simulations/new_survey")   
+async def new_survey_simulation(survey_id: str, n_of_runs: int,
+                                background_tasks: BackgroundTasks):
+    
+    if check_existence is False:
+        raise HTTPException(status_code=404, detail=f"Simulation with ID {survey_id} doesn't exist, please create simulation first.")
+    
+    #loads in demo data from cache and creates an instance of the ClassDemographic
+    if check_completion is True:
+        return {"detail": "Simulation {survey_id} is completed."}
+    
+    demo_data=json.loads(json.loads(cache.hget(survey_id, "Target Demographic").decode('utf-8')))
+    survey_data={
+        "Survey Name": cache.hget(survey_id, "Survey Name").decode('utf-8'),
+        "Survey Description": cache.hget(survey_id, "Survey Description").decode('utf-8'),
+        "Survey Questions": json.loads(cache.hget(survey_id, "Survey Questions").decode('utf-8'))
+    }
+    
+    #initialize simulation
+    cache.hset(survey_id, "Number of Runs", n_of_runs)
+    cache.hset(survey_id, "Simulation Status", "false" )
+    try:
+        background_tasks.add_task(runner.get_simulation_data, n_of_runs, survey_data, demo_data, survey_id)
+    except Exception as e:
+        raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
+
+    return {"simulation_id": survey_id, "simulation_status": False} ##sth indicatiing simulation status of a file to client status
+
+
+@app.get("/simulations/surveys/status")
+async def simulation_status(sim_id: str):
+    
+    if check_existence(sim_id) is False:
+        raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
+    
+    if check_completion(sim_id) is False:
+        # mongo_load_simulation(sim_id)
+        n_total=int(cache.hget(sim_id, "Number of Runs").decode("utf-8"))
+        n_completed=len(cache.lrange('r'+sim_id,0,-1))
+        simulation_percentage= (n_completed/n_total)*100
+        return {"simulation status": str(simulation_percentage)+"%"}
+    
+    else:
+        return {"simulation status": "Complete"}
+    
+    
+
+@app.get("/simulations/surveys")
+async def load_survey(survey_id: str):
+    
+    if check_existence(survey_id) is False:
+        raise HTTPException(status_code=404, detail=f"Simulation with ID {survey_id} doesn't exist, please create simulation first.")
+    
+    if check_completion(survey_id) is True:
+        try:
+            #trying to load from cache
+            cached_data=cache.hgetall(survey_id)
+            if cached_data:
+                print(f'Data returned from cache')
+                return cached_data
+            
+            #trying to load from mongodb
+            query=mongo_db.collection_simulations.find_one({"_id":survey_id})
+            if query:
+                print(f'Data returned from MongoDB')
+                return query
+        
+        except Exception as e:
+                print(f"Error occurred: {e}")
+                raise HTTPException(status_code=400, detail=f"Failed to load file, please try again later.")
+    
+    else:
+        try:
+            n_total=int(cache.hget(survey_id, "Number of Runs").decode("utf-8"))
+            n_completed=len(cache.lrange('r'+survey_id,0,-1))
+            simulation_percentage= (n_completed/n_total)*100
+            return{"detail": "Simulation in progress:"+str(simulation_percentage)+"%"}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail= f'Simulation request does not exist: {e}')
+        
+        
+@app.get("/simulations/surveys/csv")
+async def load_simulation_csv(survey_id: str, file_path = "./simulations"):
+    ## check if simulation complete first
+    if check_existence(survey_id) is False:
+        raise HTTPException(status_code=404, detail=f"Simulation with ID {survey_id} doesn't exist, please create simulation first.")
+
+    if check_completion(survey_id) is True:
+        mongo_load_simulation(survey_id)
+        data_services.create_csv_from_simulation_results(survey_id)
+        file_path = f"{file_path}/{survey_id}_Simulation_Results.csv"
+           
+        
+        # Check if the file exists
+        if not os.path.isfile(file_path):
+            raise HTTPException(status_code=404, detail="CSV file not found.")
+        return FileResponse(path=file_path, media_type='text/csv', filename=f"{survey_id}_Simulation_Results.csv")
+    
+    else: 
+        try:
+            n_total=int(cache.hget(survey_id, "Number of Runs").decode("utf-8"))
+            n_completed=len(cache.lrange('r'+survey_id,0,-1))
+            simulation_percentage= (n_completed/n_total)*100
+            return{"detail": "Simulation in progress:"+str(simulation_percentage)+"%"}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail= f'{e}')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

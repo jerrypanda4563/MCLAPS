@@ -5,10 +5,11 @@
 
 1. create a .env file inside app with the following:
 ```
-OPEN-AI-API-KEY=your_api_key
-BUBBLE-DATA-API-URL=
-BUBBLE-DATA-API-TOKEN=
-BUBBLE-VERSION=test
+OPEN-AI-API-KEY = 
+MONGO_URI = 
+REDIS_URI = 
+
+
 ```
 
 2. run with uvicorn

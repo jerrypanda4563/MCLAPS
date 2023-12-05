@@ -8,10 +8,10 @@ COPY ./app /code/app
 
 
 # Add tests
-COPY ./tests /code/tests
+COPY ./tests /test
 
 # Run tests
-RUN pytest tests/
+RUN pytest test/
 
 # Make port 80 available to the world outside this container
 EXPOSE 80

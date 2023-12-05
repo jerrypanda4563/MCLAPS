@@ -1,4 +1,5 @@
 from app.internal import agent, demgen
+from typing import Dict
 import json
 
 
@@ -10,7 +11,7 @@ class MaxRetry(Exception):
 
 
 class Simulation():
-    def __init__(self, survey: list, demo: demgen.Demographic, context=None):
+    def __init__(self, survey: list, demo: Dict, context=None):
         # input
         self.survey = survey  # must be a list of dict
         self.survey_context = context  # str
@@ -19,8 +20,6 @@ class Simulation():
         self.demographic_data = {}
         self.responses = []
 
-    def update_demographic_parameters(self, demo: demgen.Demographic):
-        self.demographic = demo
 
     def run(self):
         max_retries = 3  # Set maximum number of retries
@@ -37,20 +36,17 @@ class Simulation():
             raise MaxRetry("Maximum retries reached for generating demographic.")
         # End of retry block
 
-        # Retry block for loading demographic data
-        for _ in range(max_retries):
-            try:
-                self.demographic_data.update(json.loads(demo))
-                break
-            except json.JSONDecodeError:
-                print(f"Error decoding the generated demographic JSON (Attempt {_ + 1}).")
-            except Exception as e:
-                print(f"Error in updating demographic data (Attempt {_ + 1}): {e}")
-        else:
-            # print("Maximum retries reached for updating demographic data.")
-            raise MaxRetry("Maximum retries reached for updating demographic data.")
+
+        #  block for loading demographic data
+        try:
+            self.demographic_data.update(json.loads(demo))
+        except json.JSONDecodeError:
+            print(f"Error decoding the generated demographic JSON (Attempt {_ + 1}).")
+        except Exception as e:
+            print(f"Error in updating demographic data (Attempt {_ + 1}): {e}")
 
         # End of block
+
 
         # initiating simulation agent
         simulator = agent.Agent(
@@ -74,16 +70,14 @@ class Simulation():
                 continue
             # End of block
 
-            # Retry block for loading response data
-            for _ in range(max_retries):
-                try:
-                    response_data = json.loads(response)
-                    self.responses.append(response_data)
-                    break
-                except json.JSONDecodeError:
-                    print(f"Error decoding the response JSON (Attempt {_ + 1}).")
-                except Exception as e:
-                    print(f"Error processing response data (Attempt {_ + 1}): {e}")
-            else:
-                print(f"Failed to process response after {max_retries} attempts. Skipping.")
+            # try block for loading response data
+            try:
+                response_data = json.loads(response)
+                self.responses.append(response_data)
+                
+            except json.JSONDecodeError:
+                print(f"Error decoding the response JSON (Attempt {_ + 1}).")
+            except Exception as e:
+                print(f"Error processing response data (Attempt {_ + 1}): {e}")
+         
             # End of block

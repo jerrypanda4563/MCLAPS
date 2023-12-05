@@ -114,12 +114,13 @@ class Agent:
     
     def generate_response(self, input_prompt):
         completion=openai.ChatCompletion.create(
-                  model="gpt-3.5-turbo-16k",
+                  model="gpt-3.5-turbo-1106",
+                  response_format={"type": "json_object"},
                   messages=[
-                        {"role": "system", "content": self.character+"\nContextual memory:"+self.memory},
+                        {"role": "system", "content": "Imagine you are the following person:" + self.character + "\nContextual memory:"+self.memory},
                         {"role": "user", "content":input_prompt},
                     ],
-                  temperature=1,
+                  temperature=1.2,
                   max_tokens=1024,
                   n=1  
                 )

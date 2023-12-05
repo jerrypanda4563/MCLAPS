@@ -1,67 +1,78 @@
-from app import main
-from app.internal import demgen, survey
+from app.internal import demgen
 from app.internal import simulation_runner as runner
+from app.redis_config import cache
+import json
+
+from app.redundant import survey
 
 
 # comment: survey specifics still require optimization, output still as default into simulation folder in csv.
 
 # simulation 1: Pricing Research on a New Fitness Tracker
-def pricing_simulation(n, v_age: str = '20-40', v_country_of_residence: str = "United Kingdom",
-                       v_income_level: str = "£60000 to £80000"):
-    s = survey.Survey("Pricing_2")
-    s.description = "Survey for Pricing Research on a New Fitness Tracker"
-    # Section 1 Demographics
-    s.add_short_answer_question("Age:")
-    s.add_multiple_choice_question("Gender:", ["Male", "Female", "Non-Binary"])
-    s.add_short_answer_question("Occupation:")
-    # Section 2 Existing behavior
-    s.add_multiple_choice_question("Do you currently use a fitness tracker?", ["Yes", "No"])
-    s.add_short_answer_question("If yes, which brand/model of fitness tracker do you use?")
-    s.add_checkboxes_question("What features do you most value in a fitness tracker?",
-                              ["Activity tracking (steps, distance, calories burned, etc.)", "Heart rate monitoring",
-                               "Sleep tracking", "GPS navigation", "Smartphone notifications", "Battery life",
-                               "Aesthetic/design"])
-    # Section 3 pricing
-    s.add_linear_scale_question(
-        "At a price of $50, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
-        1, 10)
-    s.add_linear_scale_question(
-        "At a price of $100, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
-        1, 10)
-    s.add_linear_scale_question(
-        "At a price of $150, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
-        1, 10)
-    s.add_linear_scale_question(
-        "At a price of $200, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
-        1, 10)
-    s.add_linear_scale_question(
-        "At a price of $250, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
-        1, 10)
-    s.add_linear_scale_question(
-        "At a price of $300, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
-        1, 10)
-    s.add_linear_scale_question(
-        "At a price of $350, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
-        1, 10)
-    s.add_linear_scale_question(
-        "At a price of $400, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
-        1, 10)
-    s.add_linear_scale_question(
-        "At a price of $500, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
-        1, 10)
-    s.add_linear_scale_question(
-        "At a price of $600, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
-        1, 10)
-    demo = demgen.Demographic(
-        age=v_age,  # variable
-        income_level=v_income_level,
-        country_of_residence=v_country_of_residence,
-        hobbies_and_interests='Interest in fitness, wellness, and technology',
-        physical_activity_levels='Moderate to high',
-        social_media_usage='Moderate to high',
-        general_health_status='Good to excellent',
-    )
-    runner.get_simulation_data(n, s, demo, s.description)
+def pricing_simulation(n, sim_id: str, v_age: str = '20-40', v_country_of_residence: str = "United Kingdom", v_income_level: str = "£60000 to £80000"):
+        s = survey.Survey("Pricing")
+        s.description = "Survey for Pricing Research on a New Fitness Tracker"
+        # Section 1 Demographics
+        s.add_short_answer_question("Age:")
+        s.add_multiple_choice_question("Gender:", ["Male", "Female", "Non-Binary"])
+        s.add_short_answer_question("Occupation:")
+        # Section 2 Existing behavior
+        s.add_multiple_choice_question("Do you currently use a fitness tracker?", ["Yes", "No"])
+        s.add_short_answer_question("If yes, which brand/model of fitness tracker do you use?")
+        s.add_checkboxes_question("What features do you most value in a fitness tracker?",
+                                ["Activity tracking (steps, distance, calories burned, etc.)", "Heart rate monitoring",
+                                "Sleep tracking", "GPS navigation", "Smartphone notifications", "Battery life",
+                                "Aesthetic/design"])
+        # Section 3 pricing
+        s.add_linear_scale_question(
+            "At a price of $50, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
+            1, 10)
+        s.add_linear_scale_question(
+            "At a price of $100, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
+            1, 10)
+        s.add_linear_scale_question(
+            "At a price of $150, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
+            1, 10)
+        s.add_linear_scale_question(
+            "At a price of $200, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
+            1, 10)
+        s.add_linear_scale_question(
+            "At a price of $250, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
+            1, 10)
+        s.add_linear_scale_question(
+            "At a price of $300, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
+            1, 10)
+        s.add_linear_scale_question(
+            "At a price of $350, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
+            1, 10)
+        s.add_linear_scale_question(
+            "At a price of $400, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
+            1, 10)
+        s.add_linear_scale_question(
+            "At a price of $500, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
+            1, 10)
+        s.add_linear_scale_question(
+            "At a price of $600, how likely would you be to purchase the fitness tracker? (1 being least likely and 10 being most likely)",
+            1, 10)
+        demo = demgen.Demographic(
+            age=v_age,  # variable
+            income_level=v_income_level,
+            country_of_residence=v_country_of_residence,
+            hobbies_and_interests='Interest in fitness, wellness, and technology',
+            physical_activity_levels='Moderate to high',
+            social_media_usage='Moderate to high',
+            general_health_status='Good to excellent',
+        )
+        cache.hset(sim_id, "Survey Name", s.name)
+        cache.hset(sim_id, "Survey Description", s.description)
+        cache.hset(sim_id, "Survey Questions", json.dumps(s.questions))
+        cache.hset(sim_id, "Target Demographic", json.dumps(demo.return_dict()))
+        cache.hset(sim_id, "Number of Runs", n)
+        print(f'Cache object created with id {sim_id}')
+        runner.get_simulation_data(n, s, demo, sim_id)
+
+
+
 
 
 def ev_consumer_sentiment_survey(n, v_age: str = '18-65', v_country_of_residence: str = "United Kingdom",
@@ -114,7 +125,7 @@ def ev_consumer_sentiment_survey(n, v_age: str = '18-65', v_country_of_residence
         income_level=v_income_level,  # variable
         social_media_usage='Moderate to high',
     )
-    runner.get_simulation_data(n, s, demo, s.description)
+    runner.get_simulation_data(n, s, demo, context = s.description )
 
 
 def online_shopping_behavior_survey(n, v_age: str = '18-65', v_country_of_residence: str = "Belgium",
@@ -161,6 +172,7 @@ def online_shopping_behavior_survey(n, v_age: str = '18-65', v_country_of_reside
         "If you miss out on a product during the sale, would you consider buying it at full price later?",
         ["Yes", "No"])
     demo = demgen.Demographic(
+        age=v_age,
         country_of_residence=v_country_of_residence,  # variable
         income_level=v_income_level,  # variable
         shopping_preferences="Online shopping",

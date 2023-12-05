@@ -1,12 +1,13 @@
 import csv
 import os
 import json
+from typing import Optional
 
 
 class Survey:
 
-    def __init__(self, name: str):
-        self.description = None
+    def __init__(self, name: str, descrtiption: Optional[str]=None):
+        self.description = descrtiption
         self.name = name
         self.questions = []
 
