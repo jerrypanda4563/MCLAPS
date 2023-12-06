@@ -17,4 +17,3 @@ def db_connection_test() -> bool:
     except Exception as e:
         print(f'Mongo connection failed: {e}')
         return False
-

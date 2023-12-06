@@ -1,9 +1,23 @@
 services:
   - type: web
-    name: main-api
+    name: akasha-ai
+    runtime: docker
     region: frankfurt
     plan: free
     env: python
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --reload"
-    autoDeploy: false
+    autoDeploy: true
+
+services:
+  # A Docker web service
+  - type: web
+    name: akasha-ai
+    runtime: docker
+    repo: https://github.com/jerrypanda4563/MCLAPS  # optional
+    region: frankfurt # optional (defaults to oregon)
+    plan: free # optional (defaults to starter instance type)
+    branch: master # optional (defaults to master)
+    rootDir: webdis
+    healthCheckPath: /
+    

@@ -14,13 +14,13 @@ REDIS_URI =
 
 2. run with uvicorn
 ```shell
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 80 --reload
 ```
 
 3. access endpoints via localhost fastapi interface
 
 ```shell
-http://localhost:8000/docs#/
+http://localhost:80/docs#/
 ```
 
 4. sample request body
