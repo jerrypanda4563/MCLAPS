@@ -73,29 +73,29 @@ class DemographicModel(BaseModel):
 
 #survey validation model
 class ShortAnswerQuestion(BaseModel):
-    type: str = Field("short answer", const=True)
+    type: str = Field("short answer", Literal=True)
     question: str
     answer: Optional[str] = None
 
 class LongAnswerQuestion(BaseModel):
-    type: str = Field("long answer", const=True)
+    type: str = Field("long answer", Literal=True)
     question: str
     answer: Optional[str] = None
 
 class MultipleChoiceQuestion(BaseModel):
-    type: str = Field("multiple choice", const=True)
+    type: str = Field("multiple choice", Literal=True)
     question: str
     choices: List[str]
     answer: Optional[str] = None
 
 class CheckboxesQuestion(BaseModel):
-    type: str = Field("checkboxes", const=True)
+    type: str = Field("checkboxes", Literal=True)
     question: str
     choices: List[str]
     answer: Optional[List[str]] = None
 
 class LinearScaleQuestion(BaseModel):
-    type: str = Field("linear scale", const=True)
+    type: str = Field("linear scale", Literal=True)
     question: str
     min_value: int
     max_value: int
