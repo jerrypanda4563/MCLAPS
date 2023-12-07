@@ -19,7 +19,7 @@ import json
 
 
 
-app = FastAPI()
+application = FastAPI()
 
 #Demographic validation model
 class DemographicModel(BaseModel):
