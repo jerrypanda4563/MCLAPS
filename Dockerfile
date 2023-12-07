@@ -1,11 +1,12 @@
 FROM python:3.9
 
 WORKDIR /code
-COPY ./requirements.txt .
+COPY ./requirements.txt /code/
 RUN pip install --no-cache-dir --upgrade -v -r requirements.txt
 
 COPY ./app /code/app
-COPY ./simulations .
+COPY ./tests /code/tests
+COPY ./simulations /code/simulations
 
 
 EXPOSE 80
