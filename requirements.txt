@@ -10,4 +10,5 @@ pydantic
 redis
 python-multipart
 uvicorn
+celery
 pytest
