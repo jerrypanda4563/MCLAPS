@@ -4,7 +4,7 @@ WORKDIR /code
 COPY ./requirements.txt .
 RUN pip install --no-cache-dir --upgrade -v -r requirements.txt
 
-COPY ./app /app
+COPY ./app /code/app
 COPY ./simulations .
 
 
