@@ -189,7 +189,7 @@ def mongo_load_simulation(sim_id:str) -> bool:
 
 
 #start-up event
-@app.on_event("startup")
+@application.on_event("startup")
 async def tests():
     print("Running startup connection tests...")
     openai_status=test.openai_connection_test()
@@ -207,7 +207,7 @@ async def tests():
 
 
 #endpoints
-@app.post("/survey/create_survey")
+@application.post("/survey/create_survey")
 async def create_survey(survey_model: SurveyModel, demographic_model: DemographicModel):
     sim_id = str(uuid.uuid4()) 
     survey_questions = [question.json() for question in survey_model.questions]
@@ -227,7 +227,7 @@ async def create_survey(survey_model: SurveyModel, demographic_model: Demographi
     return data ### json for creating new Simulation File in Bubble
 
 
-@app.post("/simulations/new_simulation")   
+@application.post("/simulations/new_simulation")   
 async def new_simulation(sim_id: str, n_of_runs: int,
                                 background_tasks: BackgroundTasks):
     
@@ -256,7 +256,7 @@ async def new_simulation(sim_id: str, n_of_runs: int,
     return {"simulation_id": sim_id, "simulation_status": False} ##sth indicatiing simulation status of a file to client status
 
 
-@app.get("/simulations/simulation_status")
+@application.get("/simulations/simulation_status")
 async def simulation_status(sim_id: str):
     
     if check_existence(sim_id) is False:
@@ -274,7 +274,7 @@ async def simulation_status(sim_id: str):
     
     
 
-@app.get("/simulations/load_simulation")
+@application.get("/simulations/load_simulation")
 async def load_simulation(sim_id: str):
     
     if check_existence(sim_id) is False:
@@ -308,7 +308,7 @@ async def load_simulation(sim_id: str):
             raise HTTPException(status_code=400, detail= f'Simulation request does not exist: {e}')
         
         
-@app.get("/simulations/load_simulation/csv")
+@application.get("/simulations/load_simulation/csv")
 async def load_simulation_csv(sim_id: str, file_path = "./simulations"):
     ## check if simulation complete first
     if check_existence(sim_id) is False:
