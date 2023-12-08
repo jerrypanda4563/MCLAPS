@@ -1,19 +1,14 @@
 FROM python:3.9
 
 WORKDIR /code
-COPY ./requirements.txt /code/requirements.txt
+COPY ./requirements.txt /code/
+RUN pip install --no-cache-dir --upgrade -v -r requirements.txt
 
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 COPY ./app /code/app
+COPY ./tests /code/tests
+COPY ./simulations /code/simulations
 
 
-# Add tests
-COPY ./tests /test
-
-# Run tests
-RUN pytest test/
-
-# Make port 80 available to the world outside this container
 EXPOSE 80
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:application", "--host", "0.0.0.0", "--port", "80"]
