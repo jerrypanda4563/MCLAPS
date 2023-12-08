@@ -207,6 +207,11 @@ async def tests():
 
 
 #endpoints
+@application.get("/root")
+async def root():
+    return{"API Connection": "Success!"}
+
+
 @application.post("/survey/create_survey")
 async def create_survey(survey_model: SurveyModel, demographic_model: DemographicModel):
     sim_id = str(uuid.uuid4()) 
