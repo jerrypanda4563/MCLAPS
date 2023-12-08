@@ -216,7 +216,7 @@ async def test_services():
     openai_status=test.openai_connection_test()
     mongo_status=test.mongo_connection_test()
     redis_status=test.redis_connection_test()
-    return {"OpenAI Status": openai_status, "Mongo Status": mongo_status, "Redis Status": redis_status}
+    return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status)}
 
 
 
