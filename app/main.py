@@ -189,21 +189,21 @@ def mongo_load_simulation(sim_id:str) -> bool:
 
 
 #start-up event
-@application.on_event("startup")
-async def tests():
-    print("Running startup connection tests...")
-    openai_status=test.openai_connection_test()
-    if openai_status is False:
-        print("OpenAI connection failed")
-        sys.exit(1)
-    mongo_status=test.mongo_connection_test()
-    if mongo_status is False:
-        print("MongoDB connection failed")
-        sys.exit(1)
-    redis_status=test.redis_connection_test()
-    if redis_status is False:
-        print("Redis connection failed")
-        sys.exit(1)
+# @application.on_event("startup")
+# async def tests():
+#     print("Running startup connection tests...")
+#     openai_status=test.openai_connection_test()
+#     if openai_status is False:
+#         print("OpenAI connection failed")
+#         sys.exit(1)
+#     mongo_status=test.mongo_connection_test()
+#     if mongo_status is False:
+#         print("MongoDB connection failed")
+#         sys.exit(1)
+#     redis_status=test.redis_connection_test()
+#     if redis_status is False:
+#         print("Redis connection failed")
+#         sys.exit(1)
 
 
 #endpoints
