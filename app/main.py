@@ -207,7 +207,7 @@ def mongo_load_simulation(sim_id:str) -> bool:
 
 
 #endpoints
-@application.get("/root")
+@application.get("/")
 async def root():
     return{"API Connection": "Success!"}
 
