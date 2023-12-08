@@ -5,10 +5,13 @@ import app.settings as settings
 
 
 def redis_connection_test() -> bool:
-    redis_config.cache_connection_test() #return boolean
+    redis_status=redis_config.cache_connection_test() #return boolean
+    return redis_status
 
 def mongo_connection_test() -> bool:
-    mongo_config.db_connection_test() #return boolean
+    mongo_status=mongo_config.db_connection_test() #return boolean
+    return mongo_status
+    
 
 def openai_connection_test() -> bool:
     openai.api_key=settings.OPEN_AI_KEY
