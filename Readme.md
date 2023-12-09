@@ -14,7 +14,7 @@ REDIS_URI =
 
 2. run with uvicorn
 ```shell
-uvicorn app.main:app --host 0.0.0.0 --port 80 --reload
+uvicorn app.main:application --host 0.0.0.0 --port 80 --reload
 ```
 
 3. access endpoints via localhost fastapi interface

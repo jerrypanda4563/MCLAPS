@@ -211,6 +211,7 @@ def mongo_load_simulation(sim_id:str) -> bool:
 async def root():
     return{"API Connection": "Success!"}
 
+
 @application.get("/connection_test")
 async def test_services():
     openai_status=test.openai_connection_test()
@@ -328,15 +329,29 @@ async def load_simulation_csv(sim_id: str, file_path = "./simulations"):
         raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
 
     if check_completion(sim_id) is True:
-        mongo_load_simulation(sim_id)
-        data_services.create_csv_from_simulation_results(sim_id)
-        file_path = f"{file_path}/{sim_id}_Simulation_Results.csv"
-           
+        try:
+            
+            data_services.create_csv_from_simulation_results(sim_id)
+            file_path = f"{file_path}/{sim_id}_Simulation_Results.csv"
+
+            if not os.path.isfile(file_path):
+                raise HTTPException(status_code=404, detail="CSV file not found.")
+            return FileResponse(path=file_path, media_type='text/csv', filename=f"{sim_id}_Simulation_Results.csv")
         
-        # Check if the file exists
-        if not os.path.isfile(file_path):
-            raise HTTPException(status_code=404, detail="CSV file not found.")
-        return FileResponse(path=file_path, media_type='text/csv', filename=f"{sim_id}_Simulation_Results.csv")
+        ### NEW try exception block for loading from redis
+        except Exception as e: 
+            print(f'Cache not available {e}, trying to load from Mongo.')
+            try:
+                mongo_load_simulation(sim_id)
+                data_services.create_csv_from_simulation_results(sim_id)
+                file_path = f"{file_path}/{sim_id}_Simulation_Results.csv"
+                if not os.path.isfile(file_path):
+                    raise HTTPException(status_code=404, detail="CSV file not found.")
+                return FileResponse(path=file_path, media_type='text/csv', filename=f"{sim_id}_Simulation_Results.csv")
+           
+            except Exception as e:
+                print(f'error loading csv {e}')
+                raise HTTPException(status_code=500, detail = f'Error loading csv: {e}')
     
     else: 
         try:
