@@ -311,13 +311,13 @@ async def load_simulation(sim_id: str):
             if cached_data:
                 data={
                     "_id":sim_id,
-                    "Survey Name":cached_data["Survey Name"],
-                    "Survey Description":cached_data["Survey Description"],
-                    "Survey Questions": json.loads(cached_data["Survey Questions"]),
-                    "Target Demographic": json.loads(cached_data["Target Demographic"]),
-                    "Number of Runs": cached_data["Number of Runs"],
-                    "Simulation Status": cached_data["Simulation Status"],
-                    "Simulation Result": json.loads(cached_data["Simulation Result"])
+                    "Survey Name":(cache.hget(sim_id,"Survey Name")).decode('utf-8'),
+                    "Survey Description":cache.hget(sim_id, "Survey Description").decode('utf-8'),
+                    "Survey Questions": json.loads(cache.hget(sim_id, "Survey Questions").decode('utf-8')),
+                    "Target Demographic": json.loads(cache.hget(sim_id, "Target Demographic").decode('utf-8')),
+                    "Number of Runs": cache.hget(sim_id, "Number of Runs").decode('utf-8'),
+                    "Simulation Status": cache.hget(sim_id, "Simulation Status").decode('utf-8'),
+                    "Simulation Result": json.loads(cache.hget(sim_id,"Simulation Result").decode('utf-8'))
                 }
                 print(f'Data returned from cache')
                 return data
