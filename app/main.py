@@ -235,8 +235,11 @@ async def create_survey(survey_model: SurveyModel, demographic_model: Demographi
         raise HTTPException(status_code=400, detail=f"Failed to create survey: {e}")
     
     data={
-        **{"_id":sim_id},
-        **cache.hgetall(sim_id)
+        "_id":sim_id,
+        "Survey Name":(cache.hget(sim_id,"Survey Name")).decode('utf-8'),
+        "Survey Description":cache.hget(sim_id, "Survey Description").decode('utf-8'),
+        "Survey Questions": json.loads(cache.hget(sim_id, "Survey Questions").decode('utf-8')),
+        "Target Demographic": json.loads(cache.hget(sim_id, "Target Demographic").decode('utf-8'))
     }
     return data ### json for creating new Simulation File in Bubble
 
@@ -267,7 +270,7 @@ async def new_simulation(sim_id: str, n_of_runs: int,
     except Exception as e:
         raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
 
-    return {"simulation_id": sim_id, "simulation_status": False} ##sth indicatiing simulation status of a file to client status
+    return {"_id": sim_id, "Simulation Status": "In progress"} ##sth indicatiing simulation status of a file to client status
 
 
 @application.get("/simulations/simulation_status")
@@ -281,10 +284,10 @@ async def simulation_status(sim_id: str):
         n_total=int(cache.hget(sim_id, "Number of Runs").decode("utf-8"))
         n_completed=len(cache.lrange('r'+sim_id,0,-1))
         simulation_percentage= (n_completed/n_total)*100
-        return {"simulation status": str(simulation_percentage)+"%"}
+        return {"Simulation Status": str(simulation_percentage)+"%"}
     
     else:
-        return {"simulation status": "Complete"}
+        return {"Simulation Status": "Complete"}
     
     
 
