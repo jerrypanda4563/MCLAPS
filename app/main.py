@@ -309,8 +309,18 @@ async def load_simulation(sim_id: str):
             #trying to load from cache
             cached_data=cache.hgetall(sim_id)
             if cached_data:
+                data={
+                    "_id":sim_id,
+                    "Survey Name":cached_data["Survey Name"].decode('utf-8'),
+                    "Survey Description":cached_data["Survey Descriptio"].decode('utf-8'),
+                    "Survey Questions": json.loads(cached_data["Survey Questions"].decode('utf-8')),
+                    "Target Demographic": json.loads(cached_data["Target Demographic"].decode('utf-8')),
+                    "Number of Runs": cached_data["Number of Runs"].decode('utf-8'),
+                    "Simulation Status": cached_data["Simulation Status"].decode('utf-8'),
+                    "Simulation Result": json.loads(cached_data["Simulation Result"].decode('utf-8'))
+                }
                 print(f'Data returned from cache')
-                return cached_data
+                return data
             
             #trying to load from mongodb
             query=mongo_db.collection_simulations.find_one({"_id":sim_id})
