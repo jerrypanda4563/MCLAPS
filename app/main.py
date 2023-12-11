@@ -187,6 +187,11 @@ def mongo_load_simulation(sim_id:str) -> bool:
         print(f"Error loading data from MongoDB to Redis: {e}")
         return False
 
+class SimulationParameters(BaseModel):
+    sim_id: str
+    n_of_runs: int
+    class Config:
+        extra="forbid"
 
 #start-up event
 # @application.on_event("startup")
@@ -245,9 +250,11 @@ async def create_survey(survey_model: SurveyModel, demographic_model: Demographi
 
 
 @application.post("/simulations/new_simulation")   
-async def new_simulation(sim_id: str, n_of_runs: int,
+async def new_simulation(sim_param: SimulationParameters,
                                 background_tasks: BackgroundTasks):
     
+    sim_id=sim_param.sim_id
+    n_of_runs=sim_param.n_of_runs
     if check_existence is False:
         raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
     
