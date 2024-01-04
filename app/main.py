@@ -187,36 +187,42 @@ def mongo_load_simulation(sim_id:str) -> bool:
         print(f"Error loading data from MongoDB to Redis: {e}")
         return False
 
+class SimulationParameters(BaseModel):
+    sim_id: str
+    n_of_runs: int
+    class Config:
+        extra="forbid"
 
 #start-up event
-@application.on_event("startup")
-async def tests():
-    print("Running startup connection tests...")
-    openai_status=test.openai_connection_test()
-    if openai_status is False:
-        print("OpenAI connection failed")
-        sys.exit(1)
-    mongo_status=test.mongo_connection_test()
-    if mongo_status is False:
-        print("MongoDB connection failed")
-        sys.exit(1)
-    redis_status=test.redis_connection_test()
-    if redis_status is False:
-        print("Redis connection failed")
-        sys.exit(1)
+# @application.on_event("startup")
+# async def tests():
+#     print("Running startup connection tests...")
+#     openai_status=test.openai_connection_test()
+#     if openai_status is False:
+#         print("OpenAI connection failed")
+#         sys.exit(1)
+#     mongo_status=test.mongo_connection_test()
+#     if mongo_status is False:
+#         print("MongoDB connection failed")
+#         sys.exit(1)
+#     redis_status=test.redis_connection_test()
+#     if redis_status is False:
+#         print("Redis connection failed")
+#         sys.exit(1)
 
 
 #endpoints
-@application.get("/root")
+@application.get("/")
 async def root():
     return{"API Connection": "Success!"}
+
 
 @application.get("/connection_test")
 async def test_services():
     openai_status=test.openai_connection_test()
     mongo_status=test.mongo_connection_test()
     redis_status=test.redis_connection_test()
-    return {"OpenAI Status": openai_status, "Mongo Status": mongo_status, "Redis Status": redis_status}
+    return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status)}
 
 
 
@@ -234,16 +240,21 @@ async def create_survey(survey_model: SurveyModel, demographic_model: Demographi
         raise HTTPException(status_code=400, detail=f"Failed to create survey: {e}")
     
     data={
-        **{"_id":sim_id},
-        **cache.hgetall(sim_id)
+        "_id":sim_id,
+        "Survey Name":(cache.hget(sim_id,"Survey Name")).decode('utf-8'),
+        "Survey Description":cache.hget(sim_id, "Survey Description").decode('utf-8'),
+        "Survey Questions": json.loads(cache.hget(sim_id, "Survey Questions").decode('utf-8')),
+        "Target Demographic": json.loads(cache.hget(sim_id, "Target Demographic").decode('utf-8'))
     }
     return data ### json for creating new Simulation File in Bubble
 
 
 @application.post("/simulations/new_simulation")   
-async def new_simulation(sim_id: str, n_of_runs: int,
+async def new_simulation(sim_param: SimulationParameters,
                                 background_tasks: BackgroundTasks):
     
+    sim_id=sim_param.sim_id
+    n_of_runs=sim_param.n_of_runs
     if check_existence is False:
         raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
     
@@ -266,7 +277,7 @@ async def new_simulation(sim_id: str, n_of_runs: int,
     except Exception as e:
         raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
 
-    return {"simulation_id": sim_id, "simulation_status": False} ##sth indicatiing simulation status of a file to client status
+    return {"_id": sim_id, "Simulation Status": "In progress"} ##sth indicatiing simulation status of a file to client status
 
 
 @application.get("/simulations/simulation_status")
@@ -280,10 +291,10 @@ async def simulation_status(sim_id: str):
         n_total=int(cache.hget(sim_id, "Number of Runs").decode("utf-8"))
         n_completed=len(cache.lrange('r'+sim_id,0,-1))
         simulation_percentage= (n_completed/n_total)*100
-        return {"simulation status": str(simulation_percentage)+"%"}
+        return {"Simulation Status": str(simulation_percentage)+"%"}
     
     else:
-        return {"simulation status": "Complete"}
+        return {"Simulation Status": "Complete"}
     
     
 
@@ -298,8 +309,18 @@ async def load_simulation(sim_id: str):
             #trying to load from cache
             cached_data=cache.hgetall(sim_id)
             if cached_data:
+                data={
+                    "_id":sim_id,
+                    "Survey Name":(cache.hget(sim_id,"Survey Name")).decode('utf-8'),
+                    "Survey Description":cache.hget(sim_id, "Survey Description").decode('utf-8'),
+                    "Survey Questions": json.loads(cache.hget(sim_id, "Survey Questions").decode('utf-8')),
+                    "Target Demographic": json.loads(cache.hget(sim_id, "Target Demographic").decode('utf-8')),
+                    "Number of Runs": cache.hget(sim_id, "Number of Runs").decode('utf-8'),
+                    "Simulation Status": cache.hget(sim_id, "Simulation Status").decode('utf-8'),
+                    "Simulation Result": json.loads(cache.hget(sim_id,"Simulation Result").decode('utf-8'))
+                }
                 print(f'Data returned from cache')
-                return cached_data
+                return data
             
             #trying to load from mongodb
             query=mongo_db.collection_simulations.find_one({"_id":sim_id})
@@ -328,15 +349,29 @@ async def load_simulation_csv(sim_id: str, file_path = "./simulations"):
         raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
 
     if check_completion(sim_id) is True:
-        mongo_load_simulation(sim_id)
-        data_services.create_csv_from_simulation_results(sim_id)
-        file_path = f"{file_path}/{sim_id}_Simulation_Results.csv"
-           
+        try:
+            
+            data_services.create_csv_from_simulation_results(sim_id)
+            file_path = f"{file_path}/{sim_id}_Simulation_Results.csv"
+
+            if not os.path.isfile(file_path):
+                raise HTTPException(status_code=404, detail="CSV file not found.")
+            return FileResponse(path=file_path, media_type='text/csv', filename=f"{sim_id}_Simulation_Results.csv")
         
-        # Check if the file exists
-        if not os.path.isfile(file_path):
-            raise HTTPException(status_code=404, detail="CSV file not found.")
-        return FileResponse(path=file_path, media_type='text/csv', filename=f"{sim_id}_Simulation_Results.csv")
+        ### NEW try exception block for loading from redis
+        except Exception as e: 
+            print(f'Cache not available {e}, trying to load from Mongo.')
+            try:
+                mongo_load_simulation(sim_id)
+                data_services.create_csv_from_simulation_results(sim_id)
+                file_path = f"{file_path}/{sim_id}_Simulation_Results.csv"
+                if not os.path.isfile(file_path):
+                    raise HTTPException(status_code=404, detail="CSV file not found.")
+                return FileResponse(path=file_path, media_type='text/csv', filename=f"{sim_id}_Simulation_Results.csv")
+           
+            except Exception as e:
+                print(f'error loading csv {e}')
+                raise HTTPException(status_code=500, detail = f'Error loading csv: {e}')
     
     else: 
         try:

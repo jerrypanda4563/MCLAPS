@@ -1,6 +1,8 @@
 import traceback
 from typing import Dict
 import json
+import openai.error
+import time
 
 
 from app.redis_config import cache
@@ -34,13 +36,22 @@ def run_single_simulation(s: Dict, demo: Dict):
 
 #@simulator.task  for setting up celery in future
 def get_simulation_data(n_of_results: int, s:Dict, demo: Dict, sim_id: str):
-
+    
+    #simulation variables
     n_of_successful_runs = 0
     max_retries = 5
     retries = 0
+    num_workers = 5
+
+    #check mongo status before simulation
+    mongo_status=mongo_config.db_connection_test()
+    if mongo_status is False:
+        return
+
+
 
     while n_of_successful_runs < n_of_results and retries < max_retries:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:  # using 4 threads, but adjust as needed
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:  # using 4 threads, but adjust as needed
             future_to_simulation = {executor.submit(run_single_simulation, s, demo): _
                                     for _ in range(n_of_results - n_of_successful_runs)}
 
@@ -53,6 +64,7 @@ def get_simulation_data(n_of_results: int, s:Dict, demo: Dict, sim_id: str):
                         cache.rpush("r"+sim_id, json.dumps(simulation_result))
                         #############
                         print(f"Completion state:"+str(n_of_successful_runs))
+
                 except Exception as e:  # exception while getting result from future
                     print(f"An error occurred in simulation runner while getting result from future: {e}. Retrying...")
                     print(traceback.format_exc())
@@ -92,6 +104,7 @@ def get_simulation_data(n_of_results: int, s:Dict, demo: Dict, sim_id: str):
         return data 
     except mongo_config.PyMongoError as e:
         print(f'Mongo Error {e}.')
+        return data
     
         
 

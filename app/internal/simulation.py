@@ -1,6 +1,8 @@
 from app.internal import agent, demgen
 from typing import Dict
 import json
+import openai.error
+import time
 
 
 class MaxRetry(Exception):
@@ -29,6 +31,14 @@ class Simulation():
             try:
                 demo = demgen.generate_demographic(self.demographic)
                 break
+
+            except openai.error.RateLimitError as e:
+                    print(f'Rate limit error (Attempt {_ + 1}): {e}')
+                    wait_time=10
+                    time.sleep(wait_time)
+                    print (f'Waiting for {wait_time} before resuming.')
+                    
+
             except Exception as e:
                 print(f"Error in generating demographic (Attempt {_ + 1}): {e}")
         else:  # This else block is executed if the loop ends without a break
@@ -63,6 +73,13 @@ class Simulation():
                 try:
                     response = simulator.chat(prompt)
                     break
+                
+                except openai.error.RateLimitError as e:
+                    print(f'Rate limit error (Attempt {_ + 1}): {question}. {e}')
+                    wait_time=10
+                    time.sleep(wait_time)
+                    print (f'Waiting for {wait_time} before resuming.')
+
                 except Exception as e:
                     print(f"Error in chat simulation for question (Attempt {_ + 1}): {question}. Error: {e}")
             else:
@@ -76,8 +93,8 @@ class Simulation():
                 self.responses.append(response_data)
                 
             except json.JSONDecodeError:
-                print(f"Error decoding the response JSON (Attempt {_ + 1}).")
+                print(f"Error decoding the response JSON.")
             except Exception as e:
-                print(f"Error processing response data (Attempt {_ + 1}): {e}")
+                print(f"Error processing response data: {e}")
          
             # End of block
