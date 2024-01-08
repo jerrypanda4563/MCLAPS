@@ -23,6 +23,7 @@ application = FastAPI()
 
 #Demographic validation model
 class DemographicModel(BaseModel):
+    sex_at_birth: Optional[str] = None
     gender_identity: Optional[str] = None
     age: Optional[str] = None
     marital_status: Optional[str] = None
