@@ -36,10 +36,10 @@ class DemographicModel(BaseModel):
     type_of_residence: Optional[str] = None
     length_of_residence: Optional[str] = None
     level_of_education: Optional[str] = None
+    student_status: Optional[str] = None
     field_of_study: Optional[str] = None
     occupation: Optional[str] = None
     annual_income_level: Optional[str] = None
-    social_class: Optional[str] = None
     employment_status: Optional[str] = None
     home_ownership: Optional[str] = None
     ethnicity: Optional[str] = None
