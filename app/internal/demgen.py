@@ -26,7 +26,7 @@ def generate_demographic(demo: Dict):
         "Level of Education": demo["level_of_education"],
         "Student Status": demo["student_status"],
         "Field of Study": demo["field_of_study"],
-        "Occupation": demo["occupation"],
+        "Occupational Area": demo["occupational_area"],
         "Annual Income Level": demo["annual_income_level"],
         "Employment Status": demo["employment_status"],
         "Home Ownership": demo["home_ownership"],
