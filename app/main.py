@@ -1,5 +1,5 @@
 from app.internal import simulation_runner as runner
-from app.internal import data_services
+from app.internal import data_services, demgen
 import app.redis_config as redis_config
 import app.mongo_config as mongo_config
 from app.redis_config import cache
@@ -48,16 +48,22 @@ class DemographicModel(BaseModel):
     cultural_practices: Optional[str] = None
     immigration_status: Optional[str] = None
     hobbies_and_interests: Optional[str] = None
-    shopping_preferences: Optional[str] = None
+    shopping_motivations: Optional[str] = None
+    shopping_habits: Optional[str] = None
+    shopping_channels: Optional[str] = None
+    shopping_frequency: Optional[str] = None
     dietary_preferences: Optional[str] = None
     physical_activity_levels: Optional[str] = None
     social_media_usage: Optional[str] = None
     travel_habits: Optional[str] = None
-    alcohol_tobacco_use: Optional[str] = None
+    alcohol_use: Optional[str] = None
+    tobacco_and_vape_use: Optional[str] = None
     technology_usage: Optional[str] = None
     family_structure: Optional[str] = None
     household_size: Optional[str] = None
+    number_of_children: Optional[str] = None
     pet_ownership: Optional[str] = None
+    number_of_pets: Optional[str] = None
     relationship_status: Optional[str] = None
     caregiving_responsibilities: Optional[str] = None
     general_health_status: Optional[str] = None
@@ -213,6 +219,12 @@ class SimulationParameters(BaseModel):
 
 
 #endpoints
+# @application.post("/demgen_lite")
+# async def demgen_lite(prompt: str):
+#     demographic = json.loads(demgen.nerfed_generate_demographic(prompt))
+#     return demographic
+    
+
 @application.get("/")
 async def root():
     return{"API Connection": "Success!"}
