@@ -237,7 +237,7 @@ async def new_simulation(sim_param: SimulationParameters,
         print({e})
         raise HTTPException(status_code=400, detail=f"Failed to create simulation object: {e}")
     
-    demo_data=demographic_params.json()
+    demo_data=json.loads(demographic_params.json())
     survey_data={
         "Survey Name": survey_params.name,
         "Survey Description": survey_params.description,

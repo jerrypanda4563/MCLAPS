@@ -11,7 +11,7 @@ openai.api_key = settings.OPEN_AI_KEY
 
 def generate_demographic(demo: Dict):
     prompt_data = {
-        "Sex at Birth": demo["sex_at_brith"],
+        "Sex at Birth": demo["sex_at_birth"],
         "Gender Identity": demo["gender_identity"],
         "Age": demo["age"],
         "Marital Status": demo["marital_status"],
