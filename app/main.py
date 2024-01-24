@@ -118,6 +118,13 @@ class SurveyModel(BaseModel):
         if v.type not in ["short answer", "long answer", "multiple choice", "checkboxes", "linear scale"]:
             raise ValueError('Invalid question type')
         return v
+
+class SimulationParameters(BaseModel):
+    demographic_params: DemographicModel
+    survey_params: SurveyModel
+    n_of_runs: int
+    class Config:
+        extra="forbid"
 ###
 
 ##core functions
@@ -194,35 +201,6 @@ def mongo_load_simulation(sim_id:str) -> bool:
         print(f"Error loading data from MongoDB to Redis: {e}")
         return False
 
-class SimulationParameters(BaseModel):
-    sim_id: str
-    n_of_runs: int
-    class Config:
-        extra="forbid"
-
-#start-up event
-# @application.on_event("startup")
-# async def tests():
-#     print("Running startup connection tests...")
-#     openai_status=test.openai_connection_test()
-#     if openai_status is False:
-#         print("OpenAI connection failed")
-#         sys.exit(1)
-#     mongo_status=test.mongo_connection_test()
-#     if mongo_status is False:
-#         print("MongoDB connection failed")
-#         sys.exit(1)
-#     redis_status=test.redis_connection_test()
-#     if redis_status is False:
-#         print("Redis connection failed")
-#         sys.exit(1)
-
-
-#endpoints
-# @application.post("/demgen_lite")
-# async def demgen_lite(prompt: str):
-#     demographic = json.loads(demgen.nerfed_generate_demographic(prompt))
-#     return demographic
     
 
 @application.get("/")
@@ -239,58 +217,40 @@ async def test_services():
 
 
 
-@application.post("/survey/create_survey")
-async def create_survey(survey_model: SurveyModel, demographic_model: DemographicModel):
-    sim_id = str(uuid.uuid4()) 
-    survey_questions = [question.json() for question in survey_model.questions]
-    try:
-        cache.hset(sim_id, "Survey Name", survey_model.name)
-        cache.hset(sim_id, "Survey Description", survey_model.description)
-        cache.hset(sim_id, "Survey Questions", json.dumps(survey_questions))
-        cache.hset(sim_id, "Target Demographic", json.dumps(demographic_model.json()))
-    except Exception as e:
-        print({e})
-        raise HTTPException(status_code=400, detail=f"Failed to create survey: {e}")
-    
-    data={
-        "_id":sim_id,
-        "Survey Name":(cache.hget(sim_id,"Survey Name")).decode('utf-8'),
-        "Survey Description":cache.hget(sim_id, "Survey Description").decode('utf-8'),
-        "Survey Questions": json.loads(cache.hget(sim_id, "Survey Questions").decode('utf-8')),
-        "Target Demographic": json.loads(cache.hget(sim_id, "Target Demographic").decode('utf-8'))
-    }
-    return data ### json for creating new Simulation File in Bubble
-
-
-@application.post("/simulations/new_simulation")   
+@application.post("/simulations/new_simulation")
 async def new_simulation(sim_param: SimulationParameters,
                                 background_tasks: BackgroundTasks):
     
-    sim_id=sim_param.sim_id
+    sim_id = str(uuid.uuid4())
     n_of_runs=sim_param.n_of_runs
-    if check_existence is False:
-        raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
+    survey_params=sim_param.survey_params
+    demographic_params=sim_param.demographic_params
     
-    #loads in demo data from cache and creates an instance of the ClassDemographic
-    if check_completion is True:
-        return {"detail": "Simulation {sim_id} is completed."}
+    try:
+        cache.hset(sim_id, "Survey Name", survey_params.name)
+        cache.hset(sim_id, "Survey Description", survey_params.description)
+        cache.hset(sim_id, "Survey Questions", json.dumps([question.json() for question in survey_params.questions]))
+        cache.hset(sim_id, "Target Demographic", json.dumps(demographic_params.json()))
+        cache.hset(sim_id, "Number of Runs", n_of_runs)
+        cache.hset(sim_id, "Simulation Status", "false" )
+    except Exception as e:
+        print({e})
+        raise HTTPException(status_code=400, detail=f"Failed to create simulation object: {e}")
     
-    demo_data=json.loads(json.loads(cache.hget(sim_id, "Target Demographic").decode('utf-8')))
+    demo_data=demographic_params.json()
     survey_data={
-        "Survey Name": cache.hget(sim_id, "Survey Name").decode('utf-8'),
-        "Survey Description": cache.hget(sim_id, "Survey Description").decode('utf-8'),
-        "Survey Questions": json.loads(cache.hget(sim_id, "Survey Questions").decode('utf-8'))
+        "Survey Name": survey_params.name,
+        "Survey Description": survey_params.description,
+        "Survey Questions": [question.json() for question in survey_params.questions]
     }
-    
-    #initialize simulation
-    cache.hset(sim_id, "Number of Runs", n_of_runs)
-    cache.hset(sim_id, "Simulation Status", "false" )
+
     try:
         background_tasks.add_task(runner.get_simulation_data, n_of_runs, survey_data, demo_data, sim_id)
     except Exception as e:
         raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
 
-    return {"_id": sim_id, "Simulation Status": "In progress"} ##sth indicatiing simulation status of a file to client status
+    return {"_id": sim_id, "Simulation Status": "In progress"}
+
 
 
 @application.get("/simulations/simulation_status")
@@ -402,10 +362,83 @@ async def load_simulation_csv(sim_id: str, file_path = "./simulations"):
 
 
 
+##### REDUNDANT CODE #####
+#start-up event
+# @application.on_event("startup")
+# async def tests():
+#     print("Running startup connection tests...")
+#     openai_status=test.openai_connection_test()
+#     if openai_status is False:
+#         print("OpenAI connection failed")
+#         sys.exit(1)
+#     mongo_status=test.mongo_connection_test()
+#     if mongo_status is False:
+#         print("MongoDB connection failed")
+#         sys.exit(1)
+#     redis_status=test.redis_connection_test()
+#     if redis_status is False:
+#         print("Redis connection failed")
+#         sys.exit(1)
 
 
+#endpoints
+# @application.post("/demgen_lite")
+# async def demgen_lite(prompt: str):
+#     demographic = json.loads(demgen.nerfed_generate_demographic(prompt))
+#     return demographic
 
 
+# @application.post("/survey/create_survey")
+# async def create_survey(survey_model: SurveyModel, demographic_model: DemographicModel):
+#     sim_id = str(uuid.uuid4()) 
+#     survey_questions = [question.json() for question in survey_model.questions]
+#     try:
+#         cache.hset(sim_id, "Survey Name", survey_model.name)
+#         cache.hset(sim_id, "Survey Description", survey_model.description)
+#         cache.hset(sim_id, "Survey Questions", json.dumps(survey_questions))
+#         cache.hset(sim_id, "Target Demographic", json.dumps(demographic_model.json()))
+#     except Exception as e:
+#         print({e})
+#         raise HTTPException(status_code=400, detail=f"Failed to create survey: {e}")
+    
+#     data={
+#         "_id":sim_id,
+#         "Survey Name":(cache.hget(sim_id,"Survey Name")).decode('utf-8'),
+#         "Survey Description":cache.hget(sim_id, "Survey Description").decode('utf-8'),
+#         "Survey Questions": json.loads(cache.hget(sim_id, "Survey Questions").decode('utf-8')),
+#         "Target Demographic": json.loads(cache.hget(sim_id, "Target Demographic").decode('utf-8'))
+#     }
+#     return data ### json for creating new Simulation File in Bubble
 
+
+# @application.post("/simulations/new_simulation")   
+# async def new_simulation(sim_param: SimulationParameters,
+#                                 background_tasks: BackgroundTasks):
+    
+#     sim_id=sim_param.sim_id
+#     n_of_runs=sim_param.n_of_runs
+#     if check_existence is False:
+#         raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
+    
+#     #loads in demo data from cache and creates an instance of the ClassDemographic
+#     if check_completion is True:
+#         return {"detail": "Simulation {sim_id} is completed."}
+    
+#     demo_data=json.loads(json.loads(cache.hget(sim_id, "Target Demographic").decode('utf-8')))
+#     survey_data={
+#         "Survey Name": cache.hget(sim_id, "Survey Name").decode('utf-8'),
+#         "Survey Description": cache.hget(sim_id, "Survey Description").decode('utf-8'),
+#         "Survey Questions": json.loads(cache.hget(sim_id, "Survey Questions").decode('utf-8'))
+#     }
+    
+#     #initialize simulation
+#     cache.hset(sim_id, "Number of Runs", n_of_runs)
+#     cache.hset(sim_id, "Simulation Status", "false" )
+#     try:
+#         background_tasks.add_task(runner.get_simulation_data, n_of_runs, survey_data, demo_data, sim_id)
+#     except Exception as e:
+#         raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
+
+#     return {"_id": sim_id, "Simulation Status": "In progress"} ##sth indicatiing simulation status of a file to client status
 
 

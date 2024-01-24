@@ -26,7 +26,8 @@ http://localhost:80/docs#/
 4. sample request body
 ```shell
 {
-    "survey_model": {
+    "survey_params": 
+    {
         "name": "Pricing Research on a New Fitness Tracker",
         "description": "Survey for Pricing Research on a New Fitness Tracker",
         "questions": [
@@ -127,50 +128,16 @@ http://localhost:80/docs#/
             }
         ]
     },
-    "demographic_model": {
+    "demographic_params": 
+    {
         "age": "20-40",
-        "income_level": "£60000 to £80000",
+        "annual_income_level": "£60000 to £80000",
         "country_of_residence": "United Kingdom",
         "hobbies_and_interests": "Interest in fitness, wellness, and technology",
         "physical_activity_levels": "Moderate to high",
         "social_media_usage": "Moderate to high",
-        "general_health_status": "Good to excellent",
-        "gender_identity": null,
-        "marital_status": null,
-        "sexual_orientation": null,
-        "nationality": null,
-        "state_province": null,
-        "city": null,
-        "rural_or_urban": null,
-        "type_of_residence": null,
-        "length_of_residence": null,
-        "field_of_study": null,
-        "occupation": null,
-        "social_class": null,
-        "employment_status": null,
-        "home_ownership": null,
-        "ethnicity": null,
-        "languages_spoken": null,
-        "religion": null,
-        "cultural_practices": null,
-        "immigration_status": null,
-        "shopping_preferences": null,
-        "dietary_preferences": null,
-        "travel_habits": null,
-        "alcohol_tobacco_use": null,
-        "technology_usage": null,
-        "family_structure": null,
-        "household_size": null,
-        "pet_ownership": null,
-        "relationship_status": null,
-        "caregiving_responsibilities": null,
-        "disabilities_or_chronic_illnesses": null,
-        "mental_health_status": null,
-        "health_insurance_status": null,
-        "access_to_healthcare": null,
-        "political_affiliation": null,
-        "voting_behavior": null,
-        "political_engagement": null
-    }
+        "general_health_status": "Good to excellent"
+    },
+    "n_of_runs": 10
 }
 ```
