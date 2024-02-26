@@ -1,4 +1,4 @@
-from app.internal import agent, demgen
+from app.internal import demgen, response_agent 
 from typing import Dict
 import json
 import openai.error
@@ -57,13 +57,13 @@ class Simulation():
 
         # End of block
 
-
         # initiating simulation agent
-        simulator = agent.Agent(
-            "You are a person with the following demographic characteristics expressed as a json dictionary:" + demo + "\nRespond to the following survey questions expressed as a list of json dictionaries by replacing null values with your answer. Your output must maintain the same data structure as the input.")
+        simulator = response_agent.Agent(instruction="You are thinking like a real person", model = "gpt-3.5-turbo-0125", json_mode = True)
         if isinstance(self.survey_context, str):
             simulator.inject_memory(self.survey_context)
-
+        for k, v in self.demographic_data.items():
+            simulator.inject_memory(f"{k}: {v}")
+            
         # iterating through questions list
         for question in self.survey:
             prompt = json.dumps(question)

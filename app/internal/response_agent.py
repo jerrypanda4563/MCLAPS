@@ -1,0 +1,123 @@
+from app.internal import agent_data, chunking
+from app.internal.tokenizer import count_tokens
+from app import settings
+
+import numpy as np
+import pydantic
+from typing import List, Dict, Optional
+import openai
+from sklearn.metrics.pairwise import cosine_similarity as cs
+from concurrent.futures import ThreadPoolExecutor
+
+openai.api_key = settings.OPEN_AI_KEY
+
+
+
+
+
+
+class Agent:
+
+    def __init__(self, instruction:str, model:Optional[str] = "gpt-4-turbo-preview", json_mode:Optional[bool] = True):
+        self.lt_memory = agent_data.AgentData()
+        self.st_memory: List[str] = []
+        self.st_memory_capacity: int = 2000
+        self.instruction:str = instruction
+        self.llm_model = model
+        self.json_mode = json_mode
+    
+    def embed(self, string:str) -> np.ndarray:
+        response=openai.Embedding.create(
+            model="text-embedding-3-small",
+            input=str(string)
+            )
+        embedding = np.array(response['data'][0]['embedding'])
+        return embedding
+
+    def evaluator(self, string1:str, string2:str) -> float:
+        k = cs(self.embed(string1).reshape(1,-1),self.embed(string2).reshape(1,-1))[0][0]
+        return k
+        
+    def st_memory_length(self) -> int:
+        return count_tokens(' '.join(self.st_memory))
+    
+
+    def construct_st_memory(self, query:str) -> None:
+        if len(self.st_memory) == 0:
+            recalled_information = self.lt_memory.query(query)
+            if recalled_information is not None:
+                for string in recalled_information:
+                    self.st_memory.append(string)
+        else:   
+            current_memory = ' '.join(self.st_memory)
+            k = self.evaluator(query, current_memory)
+            recalled_information = self.lt_memory.query(query, evalutator_k=k)
+            if recalled_information is not None:
+                for string in recalled_information:
+                    self.st_memory.append(string)
+            if self.st_memory_length() > self.st_memory_capacity:
+                self.restructure_memory(query)
+    
+    
+    
+    #pop out strings with lowest similarity to query
+    def restructure_memory(self, query:str) -> None:
+        similarity_scores = []
+        with ThreadPoolExecutor() as executor:
+            similarity_scores = list(executor.map(self.evaluator(query, self.st_memory)))
+        while self.st_memory_length() > self.st_memory_capacity:
+            index = similarity_scores.index(min(similarity_scores))
+            self.st_memory.pop(index)
+            similarity_scores.pop(index)
+
+    def model_response(self, query: str ) -> str:
+        memory_prompt = "You recall the following information:\n" + '\n'.join(self.st_memory)
+        if self.json_mode == True:
+            completion=openai.ChatCompletion.create(
+                    model = self.llm_model,
+                    response_format={"type": "json_object"},
+                    messages=[
+                            {"role": "system", "content": self.instruction},
+                            {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query in json:/n"+query},
+                        ],
+                    temperature=1,
+                    max_tokens=512,
+                    n=1  
+                    )
+            response=completion.choices[0].message.content
+            return response
+        else:
+            completion=openai.ChatCompletion.create(
+                    model = self.llm_model,
+                    messages=[
+                            {"role": "system", "content": self.instruction},
+                            {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query:/n"+query},
+                        ],
+                    temperature=1,
+                    max_tokens=512,
+                    n=1  
+                    )
+            response=completion.choices[0].message.content
+            return response
+
+    
+    
+    #endpoints
+    def chat(self, query:str) -> str:
+        self.construct_st_memory(query)
+        response = self.model_response(query)
+        self.st_memory.append(":\n".join([query,response]))
+        if self.st_memory_length() > self.st_memory_capacity:
+            self.restructure_memory(query)
+        return response
+    
+    def inject_memory(self, string:str) -> None:
+        if count_tokens(string) > 110:
+            self.lt_memory.add_data_str(string)
+            
+        
+        
+    
+
+
+

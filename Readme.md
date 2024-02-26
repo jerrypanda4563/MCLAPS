@@ -183,5 +183,6 @@ http://localhost:80/docs#/
             "political_engagement": null
         },
     "n_of_runs": 10
+    "workers": 15
 }   
 ```

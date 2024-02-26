@@ -123,6 +123,7 @@ class SimulationParameters(BaseModel):
     demographic_params: DemographicModel
     survey_params: SurveyModel
     n_of_runs: int
+    workers: Optional[int] = 15
     class Config:
         extra="forbid"
 ###
@@ -223,6 +224,7 @@ async def new_simulation(sim_param: SimulationParameters,
     
     sim_id = str(uuid.uuid4())
     n_of_runs=sim_param.n_of_runs
+    n_of_workers=sim_param.workers
     survey_params=sim_param.survey_params
     demographic_params=sim_param.demographic_params
     
@@ -245,7 +247,7 @@ async def new_simulation(sim_param: SimulationParameters,
     }
 
     try:
-        background_tasks.add_task(runner.get_simulation_data, n_of_runs, survey_data, demo_data, sim_id)
+        background_tasks.add_task(runner.get_simulation_data, n_of_runs, survey_data, demo_data, sim_id, n_of_workers)
     except Exception as e:
         raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
 
