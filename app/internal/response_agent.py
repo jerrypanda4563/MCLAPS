@@ -70,7 +70,7 @@ class Agent:
             self.st_memory.pop(index)
             similarity_scores.pop(index)
 
-    def model_response(self, query: str ) -> str:
+    def model_response(self, query: str) -> str:
         memory_prompt = "You recall the following information:\n" + '\n'.join(self.st_memory)
         if self.json_mode == True:
             completion=openai.ChatCompletion.create(
@@ -114,6 +114,10 @@ class Agent:
     def inject_memory(self, string:str) -> None:
         if count_tokens(string) > 110:
             self.lt_memory.add_data_str(string)
+        else:
+            self.st_memory.append(string)
+            if self.st_memory_length() > self.st_memory_capacity:
+                self.restructure_memory(string)
             
         
         

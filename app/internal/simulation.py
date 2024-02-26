@@ -58,7 +58,7 @@ class Simulation():
         # End of block
 
         # initiating simulation agent
-        simulator = response_agent.Agent(instruction="You are thinking like a real person", model = "gpt-3.5-turbo-0125", json_mode = True)
+        simulator = response_agent.Agent(instruction="You are behaving like a real person.", model = "gpt-3.5-turbo-0125", json_mode = True)
         if isinstance(self.survey_context, str):
             simulator.inject_memory(self.survey_context)
         for k, v in self.demographic_data.items():
@@ -71,7 +71,7 @@ class Simulation():
             # Retry block for generating response
             for _ in range(max_retries):
                 try:
-                    response = simulator.chat(prompt)
+                    response = simulator.chat(query=("Replace null:/n"+prompt))
                     break
                 
                 except openai.error.RateLimitError as e:
