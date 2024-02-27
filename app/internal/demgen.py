@@ -183,9 +183,9 @@ def generate_demographic(demo: Dict):
     )
     
     system_prompt = json.dumps({k: v for k, v in prompt_data.items() if v is not None})
-    prompt = "General demographic group:\n" + system_prompt + "\nJSON Response schema:\n"+response_schema
+    prompt = "General demographic group:\n" + system_prompt + "\nResponse schema:\n"+response_schema
     response = openai.ChatCompletion.create(
-        model="gpt-4-0125-preview",
+        model="gpt-4-turbo-preview",
         response_format={"type": "json_object"},
         messages=[
             {"role": "system",
@@ -193,7 +193,7 @@ def generate_demographic(demo: Dict):
             {"role": "user",
              "content": prompt}
         ],
-        temperature=1.3,
+        temperature=1.2,
         max_tokens=round(2*count_tokens(response_schema)),
         top_p=1,
         frequency_penalty=0,
