@@ -1,5 +1,5 @@
 from app.internal import demgen, response_agent 
-from typing import Dict
+from typing import Dict, List
 import json
 import openai.error
 import time
@@ -13,10 +13,10 @@ class MaxRetry(Exception):
 
 
 class Simulation():
-    def __init__(self, survey: list, demo: Dict, context=None):
+    def __init__(self, survey: List[dict], demo: Dict, context=None):
         # input
-        self.survey = survey  # must be a list of dict
-        self.survey_context = context  # str
+        self.survey: List[Dict] = survey  
+        self.survey_context: str = context  
         # temp memory for storing output
         self.demographic = demo
         self.demographic_data = {}
@@ -66,8 +66,8 @@ class Simulation():
             
         # iterating through questions list
         for question in self.survey:
-            prompt = json.dumps(question)
 
+            prompt = question["question"]+"\nResponse schema:\n"+json.dumps(question)
             # Retry block for generating response
             for _ in range(max_retries):
                 try:

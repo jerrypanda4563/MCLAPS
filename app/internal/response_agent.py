@@ -72,7 +72,7 @@ class Agent:
     def restructure_memory(self, query:str) -> None:
         similarity_scores = []
         with ThreadPoolExecutor(max_workers=len(self.st_memory)) as executor:
-            similarity_scores = list(executor.map(self.evaluator(query, self.st_memory)))
+            similarity_scores = list(executor.map(lambda x: self.evaluator(query, x), self.st_memory))
         while self.st_memory_length() > self.st_memory_capacity:
             index = similarity_scores.index(min(similarity_scores))
             self.st_memory.pop(index)

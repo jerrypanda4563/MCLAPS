@@ -2,12 +2,11 @@ import openai
 import json
 from typing import Dict, Literal, Optional, List
 from pydantic import BaseModel
-
-
-import os
+from app.internal.tokenizer import count_tokens
 from app import settings
 
 openai.api_key = settings.OPEN_AI_KEY
+
 
 
 
@@ -127,19 +126,75 @@ def generate_demographic(demo: Dict):
         "Voting Behavior": demo["voting_behavior"],
         "Political Engagement": demo["political_engagement"]
     }
-    prompt = json.dumps({k: None for k in prompt_data.keys()})
+    response_schema = json.dumps(
+        {
+        "Sex at Birth": "str",
+        "Gender Identity": "str",
+        "Age": "str",
+        "Marital Status": "str",
+        "Sexual Orientation": "str",
+        "Nationality": "str",
+        "Country of Residence": "str",
+        "State/Province": "str",
+        "City": "str",
+        "Rural or Urban": "str",
+        "Type of Residence": "str",
+        "Length of Residence": "str",
+        "Level of Education": "str",
+        "Student Status": "str",
+        "Field of Study": "str",
+        "Occupational Area": "str",
+        "Annual Income Level": "str",
+        "Employment Status": "str",
+        "Home Ownership": "str",
+        "Ethnicity": "str",
+        "Language(s) Spoken": "str",
+        "Religion": "str",
+        "Cultural Practices": "str",
+        "Immigration Status": "str",
+        "Hobbies and Interests": "str",
+        "Shopping Motivations": "str",
+        "Shopping Habits": "str",
+        "Shopping Channels": "str",
+        "Shopping Frequency": "str",
+        "Dietary Preferences": "str",
+        "Physical Activity Levels": "str",
+        "Social Media Usage": "str",
+        "Travel Habits": "str",
+        "Alcohol Use": "str",
+        "Tobacco and Vape Use": "str",
+        "Technology Usage": "str",
+        "Family Structure": "str",
+        "Household Size": "str",
+        "Number of Children": "str",
+        "Pet Ownership": "str",
+        "Number of Pets": "str",
+        "Relationship Status": "str",
+        "Caregiving Responsibilities": "str",
+        "General Health Status": "str",
+        "Disabilities or Chronic Illnesses": "str",
+        "Mental Health Status": "str",
+        "Health Insurance Status": "str",
+        "Access to Healthcare": "str",
+        "Political Affiliation": "str",
+        "Voting Behavior": "str",
+        "Political Engagement": "str"
+        }
+    )
+    
     system_prompt = json.dumps({k: v for k, v in prompt_data.items() if v is not None})
+    prompt = "General demographic group:\n" + system_prompt + "\nJSON Response schema:\n"+response_schema
     response = openai.ChatCompletion.create(
-        model="gpt-4-1106-preview",
+        model="gpt-4-0125-preview",
         response_format={"type": "json_object"},
         messages=[
             {"role": "system",
-             "content": "Create a demographic profile of an individuals in json format. The constrained parameters are:\n" + system_prompt + "\nReplace the constrained value with a value falling reasonably within the category."},
+             "content": "You need to create a demographic profile of an individual belonging to a general demographic group. You must follow the JSON response schema provided to you"},
             {"role": "user",
              "content": prompt}
         ],
         temperature=1.3,
-        max_tokens=1366,
+        max_tokens=round(2*count_tokens(response_schema)),
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0
