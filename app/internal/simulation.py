@@ -13,9 +13,9 @@ class MaxRetry(Exception):
 
 
 class Simulation():
-    def __init__(self, survey: List[dict], demo: Dict, context=None):
+    def __init__(self, survey: List[str], demo: Dict, context=None):
         # input
-        self.survey: List[Dict] = survey  
+        self.survey: List[str] = survey  
         self.survey_context: str = context  
         # temp memory for storing output
         self.demographic = demo
@@ -66,8 +66,8 @@ class Simulation():
             
         # iterating through questions list
         for question in self.survey:
-
-            prompt = question["question"]+"\nResponse schema:\n"+json.dumps(question)
+            question_data = json.loads(question)
+            prompt = question_data["question"]+"\nResponse schema:\n"+json.dumps(question)
             # Retry block for generating response
             for _ in range(max_retries):
                 try:

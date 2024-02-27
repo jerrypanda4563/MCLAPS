@@ -31,6 +31,7 @@ def run_single_simulation(s: Dict, demo: Dict):
     
     except Exception as e:
         print(f"An error occurred in a single simulation run: {e}.")
+        traceback.print_exc()
         return None
 
 
