@@ -71,7 +71,7 @@ class Simulation():
             # Retry block for generating response
             for _ in range(max_retries):
                 try:
-                    response = simulator.chat(query=("Replace null:/n"+prompt))
+                    response = simulator.chat(query=(prompt))
                     break
                 
                 except openai.error.RateLimitError as e:

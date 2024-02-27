@@ -64,7 +64,7 @@ def get_simulation_data(n_of_results: int, s:Dict, demo: Dict, sim_id: str, work
                         cache.rpush("r"+sim_id, json.dumps(simulation_result))
                         #############
                         print(f"Completion state:"+str(n_of_successful_runs))
-
+                
                 except Exception as e:  # exception while getting result from future
                     print(f"An error occurred in simulation runner while getting result from future: {e}. Retrying...")
                     print(traceback.format_exc())

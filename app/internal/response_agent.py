@@ -1,10 +1,10 @@
-from app.internal import agent_data, chunking
+from app.internal import agent_data
 from app.internal.tokenizer import count_tokens
 from app import settings
 
 import numpy as np
-import pydantic
-from typing import List, Dict, Optional
+import spacy
+from typing import List, Optional
 import openai
 from sklearn.metrics.pairwise import cosine_similarity as cs
 from concurrent.futures import ThreadPoolExecutor
@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 openai.api_key = settings.OPEN_AI_KEY
 
 
-
+nlp = spacy.load("en_core_web_sm")
 
 
 
@@ -33,10 +33,18 @@ class Agent:
             )
         embedding = np.array(response['data'][0]['embedding'])
         return embedding
+        
 
     def evaluator(self, string1:str, string2:str) -> float:
-        k = cs(self.embed(string1).reshape(1,-1),self.embed(string2).reshape(1,-1))[0][0]
-        return k
+        try:
+            k = cs(self.embed(string1).reshape(1,-1),self.embed(string2).reshape(1,-1))[0][0]
+            return k
+        except Exception as e:
+            try:
+                k_backup = nlp(string1).similarity(nlp(string2))
+                return k_backup  # or any other default value
+            except Exception as e:
+                return 1.0
         
     def st_memory_length(self) -> int:
         return count_tokens(' '.join(self.st_memory))
@@ -63,7 +71,7 @@ class Agent:
     #pop out strings with lowest similarity to query
     def restructure_memory(self, query:str) -> None:
         similarity_scores = []
-        with ThreadPoolExecutor() as executor:
+        with ThreadPoolExecutor(max_workers=len(self.st_memory)) as executor:
             similarity_scores = list(executor.map(self.evaluator(query, self.st_memory)))
         while self.st_memory_length() > self.st_memory_capacity:
             index = similarity_scores.index(min(similarity_scores))
