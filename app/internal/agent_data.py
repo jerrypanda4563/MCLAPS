@@ -19,6 +19,7 @@ nlp = spacy.load("en_core_web_sm")
 
 openai.api_key = settings.OPEN_AI_KEY
 
+
 class Chunk(pydantic.BaseModel):
     parent_DataStr_id: uuid.UUID
     Chunk_id: uuid.UUID

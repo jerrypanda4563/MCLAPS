@@ -1,10 +1,10 @@
 import app.internal.response_agent as response_agent
 import app.internal.demgen as demgen
 import json
+import app.internal.simulation as simulation
 
 
-demographic_data =demgen.generate_demographic( 
-    {
+demographic= {
       "sex_at_birth": None,
       "gender_identity": None,
       "age": "22 to 29",
@@ -57,19 +57,13 @@ demographic_data =demgen.generate_demographic(
       "voting_behavior": None,
       "political_engagement": None
     }
-    )
-
-demo_data = json.loads(demographic_data)
 
 
-agent = response_agent.Agent(instruction="You are behaving like a real person.", model = "gpt-3.5-turbo-0125", json_mode = True)
-survey_context = "The product is a smartphone with the following features: \nDisplay: Vertically foldable 6.2-inch Dynamic AMOLED with high refresh rate, secondary 1.5 inch AMOLED display\nProcessor:Snapdragon Gen 3 \nCamera: Triple-camera setup with a 64MP main sensor \nBattery: 4,500mAh with fast charging \nConnectivity: 5G, Wi-Fi 6 \nStorage: 256GB/512GB expandable \nRAM: 8/12GB \nOther: Aluminium frame and gorilla glass front and back, IP68 water resistance"
-agent.inject_memory(survey_context)
-for k, v in demo_data.items():
-    agent.inject_memory(f"{k}: {v}")
-
-
-survey_questions = [{
+survey = {
+      "name": "PSM Scenario 3 Demographic 3",
+      "description": "The product is a smartphone with the following features:\nDisplay: 6.8-inch QHD+ Dynamic AMOLED with high refresh rate\nProcessor: Snapdragon Gen3\nCamera: quad-camera with 108MP main sensor, periscope zoom\nBattery: 5,500mAh with super fast charging, wireless charging\nConnectivity: 5G, Wi-Fi 6E, Ultra-wide-band\nStorage: 25G6B/512GB/1TB expandable\nRAM: 12GB/16GB\nOther: Stainless steel frame with Gorilla glass front and back build, IP68, built in AI smart features",    
+      "questions": [
+        {
           "type": "short answer",
           "question": "At what price in GBP would you consider the product to be so expensive that you would not consider buying it?",
           "answer": "int"
@@ -90,16 +84,14 @@ survey_questions = [{
             "answer": "int"
           }
         ]
+      }
 
 
-responses = []
-for question in survey_questions:
-    prompt = question["question"]+"\nResponse schema:\n"+json.dumps(question)
-    response=agent.chat(query=prompt)
-    agent.st_memory_length()
-    response_data=json.loads(response)
-    responses.append(response_data)
 
-for response in responses:
-    print(response)
-    print("\n")
+generator=demgen.Demographic_Generator(demo=demographic, n_of_results=1)
+demo_data=generator.generate_demographic_dataset()
+demo_data=demo_data[0]
+
+
+simulation_result=simulation.simulate(survey, demo_data)
+print(simulation_result)

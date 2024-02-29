@@ -9,7 +9,7 @@ from app.redis_config import cache
 import app.mongo_config as mongo_db
 import app.mongo_config as mongo_config
 
-from app.internal import simulation
+from app.redundant import simulation_old
 
 from app.internal.celery import simulator
 import concurrent
@@ -21,7 +21,7 @@ import concurrent.futures
 
 def run_single_simulation(s: Dict, demo: Dict):
     try:
-        inst = simulation.Simulation(survey = s["Survey Questions"], context = s["Survey Description"], demo = demo)
+        inst = simulation_old.Simulation(survey = s["Survey Questions"], context = s["Survey Description"], demo = demo)
         inst.run()
         simulation_data = {
             "response_data": inst.responses,

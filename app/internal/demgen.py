@@ -4,6 +4,7 @@ from typing import Dict, Literal, Optional, List
 from pydantic import BaseModel
 from app.internal.tokenizer import count_tokens
 from app import settings
+from concurrent.futures import ThreadPoolExecutor
 
 openai.api_key = settings.OPEN_AI_KEY
 
@@ -69,10 +70,62 @@ openai.api_key = settings.OPEN_AI_KEY
 
 
 
+response_schema = {
+        "Sex at Birth": "str",
+        "Gender Identity": "str",
+        "Age": "int",
+        "Marital Status": "str",
+        "Sexual Orientation": "str",
+        "Nationality": "str",
+        "Country of Residence": "str",
+        "State/Province": "str",
+        "City": "str",
+        "Rural or Urban": "str",
+        "Type of Residence": "str",
+        "Length of Residence": "str",
+        "Level of Education": "str",
+        "Student Status": "str",
+        "Field of Study": "str",
+        "Occupational Area": "str",
+        "Annual Income Level": "int",
+        "Employment Status": "str",
+        "Home Ownership": "str",
+        "Ethnicity": "str",
+        "Language(s) Spoken": "str",
+        "Religion": "str",
+        "Cultural Practices": "str",
+        "Immigration Status": "str",
+        "Hobbies and Interests": "str",
+        "Shopping Motivations": "str",
+        "Shopping Habits": "str",
+        "Shopping Channels": "str",
+        "Shopping Frequency": "str",
+        "Dietary Preferences": "str",
+        "Physical Activity Levels": "str",
+        "Social Media Usage": "str",
+        "Travel Habits": "str",
+        "Alcohol Use": "str",
+        "Tobacco and Vape Use": "str",
+        "Technology Usage": "str",
+        "Family Structure": "str",
+        "Household Size": "str",
+        "Number of Children": "int",
+        "Pet Ownership": "str",
+        "Number of Pets": "str",
+        "Relationship Status": "str",
+        "Caregiving Responsibilities": "str",
+        "General Health Status": "str",
+        "Disabilities or Chronic Illnesses": "str",
+        "Mental Health Status": "str",
+        "Health Insurance Status": "str",
+        "Access to Healthcare": "str",
+        "Political Affiliation": "str",
+        "Voting Behavior": "str",
+        "Political Engagement": "str"
+        }
 
 
-
-def generate_demographic(demo: Dict):
+def generate_demographic(demo: Dict, response_model: Optional[str] = "gpt-3.5-turbo-0125"):
     prompt_data = {
         "Sex at Birth": demo["sex_at_birth"],
         "Gender Identity": demo["gender_identity"],
@@ -126,75 +179,21 @@ def generate_demographic(demo: Dict):
         "Voting Behavior": demo["voting_behavior"],
         "Political Engagement": demo["political_engagement"]
     }
-    response_schema = json.dumps(
-        {
-        "Sex at Birth": "str",
-        "Gender Identity": "str",
-        "Age": "str",
-        "Marital Status": "str",
-        "Sexual Orientation": "str",
-        "Nationality": "str",
-        "Country of Residence": "str",
-        "State/Province": "str",
-        "City": "str",
-        "Rural or Urban": "str",
-        "Type of Residence": "str",
-        "Length of Residence": "str",
-        "Level of Education": "str",
-        "Student Status": "str",
-        "Field of Study": "str",
-        "Occupational Area": "str",
-        "Annual Income Level": "str",
-        "Employment Status": "str",
-        "Home Ownership": "str",
-        "Ethnicity": "str",
-        "Language(s) Spoken": "str",
-        "Religion": "str",
-        "Cultural Practices": "str",
-        "Immigration Status": "str",
-        "Hobbies and Interests": "str",
-        "Shopping Motivations": "str",
-        "Shopping Habits": "str",
-        "Shopping Channels": "str",
-        "Shopping Frequency": "str",
-        "Dietary Preferences": "str",
-        "Physical Activity Levels": "str",
-        "Social Media Usage": "str",
-        "Travel Habits": "str",
-        "Alcohol Use": "str",
-        "Tobacco and Vape Use": "str",
-        "Technology Usage": "str",
-        "Family Structure": "str",
-        "Household Size": "str",
-        "Number of Children": "str",
-        "Pet Ownership": "str",
-        "Number of Pets": "str",
-        "Relationship Status": "str",
-        "Caregiving Responsibilities": "str",
-        "General Health Status": "str",
-        "Disabilities or Chronic Illnesses": "str",
-        "Mental Health Status": "str",
-        "Health Insurance Status": "str",
-        "Access to Healthcare": "str",
-        "Political Affiliation": "str",
-        "Voting Behavior": "str",
-        "Political Engagement": "str"
-        }
-    )
+    schema = json.dumps(response_schema)
     
     system_prompt = json.dumps({k: v for k, v in prompt_data.items() if v is not None})
-    prompt = "General demographic group:\n" + system_prompt + "\nResponse schema:\n"+response_schema
+    prompt = "General demographic group:\n" + system_prompt + "\nJSON Response schema:\n"+schema
     response = openai.ChatCompletion.create(
-        model="gpt-4-turbo-preview",
+        model=response_model,
         response_format={"type": "json_object"},
         messages=[
             {"role": "system",
-             "content": "You need to create a demographic profile of an individual belonging to a general demographic group. You must follow the JSON response schema provided to you"},
+             "content": "Create a demographic profile of an individual belonging to a general demographic group. You must follow the JSON response schema provided."},
             {"role": "user",
              "content": prompt}
         ],
         temperature=1.2,
-        max_tokens=round(2*count_tokens(response_schema)),
+        max_tokens=round(2*count_tokens(schema)),
         top_p=1,
         frequency_penalty=0,
         presence_penalty=0
@@ -203,3 +202,43 @@ def generate_demographic(demo: Dict):
     return demographic_profile
 
 
+class Demographic_Generator():
+    def __init__(self, demo: Dict, n_of_results: int):
+        self.demo = demo
+        self.n_of_results = n_of_results
+        self.demographic_data: List[Dict] = []
+        self.schema: Dict = response_schema
+    
+    def response_validator(self, demo_profile: str) -> bool: 
+        try:
+            profile_dict = json.loads(demo_profile)
+        except Exception as e:
+            print(f"JSON string formatting incorrect: {e}")
+            return False
+        
+        for k_dict, k_schema in zip(profile_dict.keys(), self.schema.keys()):
+            if k_dict != k_schema:
+                print(f"Incorrect response schema {k_dict}.")
+                return False 
+        return True
+        
+        
+    def generate_profile(self) -> Dict:
+        demo = generate_demographic(self.demo)
+        while not self.response_validator(demo):
+            demo = generate_demographic(self.demo)
+        demo_data = json.loads(demo)
+        return demo_data
+        
+    def generate_demographic_dataset(self) -> List[Dict]:
+        num_workers = max(self.n_of_results, 20)
+        with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            future_to_profile = {executor.submit(self.generate_profile): _ for _ in range(self.n_of_results)}
+            for future in future_to_profile:
+                try:
+                    profile = future.result()
+                    self.demographic_data.append(profile)
+                except Exception as e:
+                    print(f"An error occurred while generating demographic profile: {e}")
+        
+        return self.demographic_data

@@ -1,7 +1,8 @@
 from bubble_api import BubbleClient
 from typing import List,Dict, Type
-from app.internal import simulation, simulation_runner
+from app.redundant import simulation_runner
 from app import settings
+from app.redundant import simulation_old
 
 bubble_client = BubbleClient(
     base_url=settings.BUBBLE_DATA_API_URL,
