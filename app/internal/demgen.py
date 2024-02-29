@@ -5,6 +5,8 @@ from pydantic import BaseModel
 from app.internal.tokenizer import count_tokens
 from app import settings
 from concurrent.futures import ThreadPoolExecutor
+import openai.error
+import time
 
 openai.api_key = settings.OPEN_AI_KEY
 
@@ -238,6 +240,21 @@ class Demographic_Generator():
                 try:
                     profile = future.result()
                     self.demographic_data.append(profile)
+                except openai.error.ServiceUnavailableError as e:
+                    print(f'OpenAI Service unavailable error {e}')
+                    wait_time=60
+                    time.sleep(wait_time)
+                    print (f'Waiting for {wait_time} seconds before resuming.')
+                except openai.error.Timeout as e:
+                    print(f'OpenAI Timeout error')
+                    wait_time=60
+                    time.sleep(wait_time)
+                    print (f'Waiting for {wait_time} seconds before resuming.')
+                except openai.error.RateLimitError as e:
+                    print(f'OpenAI Rate limit error')
+                    wait_time=60
+                    time.sleep(wait_time)
+                    print (f'Waiting for {wait_time} seconds before resuming.')
                 except Exception as e:
                     print(f"An error occurred while generating demographic profile: {e}")
         

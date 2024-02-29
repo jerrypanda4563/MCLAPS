@@ -56,7 +56,7 @@ class Simulator():
                     time.sleep(wait_time)
                     print (f'Waiting for {wait_time} seconds before resuming.')
                 except openai.error.Timeout as e:
-                    print(f'OpenAITimeout error (Attempt {_ + 1}): {json.dumps(question_schema)}. {e}')
+                    print(f'OpenAI Timeout error (Attempt {_ + 1}): {json.dumps(question_schema)}. {e}')
                     wait_time=60
                     time.sleep(wait_time)
                     print (f'Waiting for {wait_time} seconds before resuming.')
