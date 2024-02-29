@@ -47,7 +47,7 @@ async def new_simulation(sim_param: SimulationParameters,
         
 
         
-        data_object: Dict[str, str, str, List[str], str, int, int, bool, List] = {
+        data_object: Dict = {
             "_id":sim_id,
             "Survey Name": survey_params.name,
             "Survey Description": survey_params.description,
@@ -100,7 +100,7 @@ async def simulation_status(sim_id: str):
     
 
 @application.get("/simulations/load_simulation")
-async def load_simulation(sim_id: str) -> Dict[str, str, str, List[str], str, int, int, bool, List[Dict]]:
+async def load_simulation(sim_id: str) -> Dict:
     if test.mongo_connection_test():
         database = mongo_db.collection_simulations
         obj: Dict = database.find_one({"_id": sim_id})
