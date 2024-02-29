@@ -100,7 +100,7 @@ async def simulation_status(sim_id: str):
     
 
 @application.get("/simulations/load_simulation")
-async def load_simulation(sim_id: str):
+async def load_simulation(sim_id: str) -> Dict[str, str, str, List[str], str, int, int, bool, List[Dict]]:
     if test.mongo_connection_test():
         database = mongo_db.collection_simulations
         obj: Dict = database.find_one({"_id": sim_id})
