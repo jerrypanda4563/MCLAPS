@@ -194,7 +194,7 @@ def generate_demographic(demo: Dict, response_model: Optional[str] = "gpt-3.5-tu
             {"role": "user",
              "content": prompt}
         ],
-        temperature=1.2,
+        temperature=1.4,
         max_tokens=round(2*count_tokens(schema)),
         top_p=1,
         frequency_penalty=0,

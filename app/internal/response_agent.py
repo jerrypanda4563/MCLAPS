@@ -88,7 +88,7 @@ class Agent:
                             {"role": "system", "content": self.instruction},
                             {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query in json:/n"+query},
                         ],
-                    temperature=1,
+                    temperature=1.3,
                     max_tokens=512,
                     n=1  
                     )
@@ -101,7 +101,7 @@ class Agent:
                             {"role": "system", "content": self.instruction},
                             {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query:/n"+query},
                         ],
-                    temperature=1,
+                    temperature=1.3,
                     max_tokens=512,
                     n=1  
                     )
