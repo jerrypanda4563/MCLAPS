@@ -32,7 +32,7 @@ def run_simulation(survey: Dict, demographic_parameters: Dict, n_of_runs: int, s
     print("demographic profiles generated")
     
     n_of_completed_runs = 0
-    for demo in range(demographic_profiles):
+    for demo in demographic_profiles:
         run_single_simulation(survey, demo, sim_id)
         n_of_completed_runs += 1
         print(f"Completed {n_of_completed_runs} of {n_of_runs} runs.")
