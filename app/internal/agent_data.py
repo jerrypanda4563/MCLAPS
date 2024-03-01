@@ -250,7 +250,6 @@ class AgentData:
                     # distance_list.append(distance_current)
                     # length_list.append(sum([count_tokens(chunk.string) for chunk in current_config]))
             
-            #reconstructing the string from the final configuration
             reconstructed_string = ' '.join([chunk.string for chunk in current_config])
             
             # distance_list_normalized = [(distance-min(distance_list))/(max(distance_list)-min(distance_list)) for distance in distance_list]

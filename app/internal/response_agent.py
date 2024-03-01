@@ -41,10 +41,12 @@ class Agent:
             return k
         except Exception as e:
             try:
-                k_backup = nlp(string1).similarity(nlp(string2))
-                return k_backup  # or any other default value
+                v_1=np.array(nlp(string1).vector)
+                v_2=np.array(nlp(string2).vector)
+                k_backup = cs(v_1.reshape(1,-1),v_2.reshape(1,-1))[0][0]
+                return k_backup  
             except Exception as e:
-                return 1.0
+                return 0  # or any other default value
         
     def st_memory_length(self) -> int:
         return count_tokens(' '.join(self.st_memory))
@@ -75,8 +77,10 @@ class Agent:
             similarity_scores = list(executor.map(lambda x: self.evaluator(query, x), self.st_memory))
         while self.st_memory_length() > self.st_memory_capacity:
             index = similarity_scores.index(min(similarity_scores))
-            self.st_memory.pop(index)
+            forgotten_memory = self.st_memory.pop(index)
             similarity_scores.pop(index)
+            self.lt_memory.add_data_str(forgotten_memory)
+            
 
     def model_response(self, query: str) -> str:
         memory_prompt = "You recall the following information:\n" + '\n'.join(self.st_memory)
@@ -88,7 +92,7 @@ class Agent:
                             {"role": "system", "content": self.instruction},
                             {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query in json:/n"+query},
                         ],
-                    temperature=1.3,
+                    temperature=1.11,
                     max_tokens=512,
                     n=1  
                     )
@@ -101,7 +105,7 @@ class Agent:
                             {"role": "system", "content": self.instruction},
                             {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query:/n"+query},
                         ],
-                    temperature=1.3,
+                    temperature=1.11,
                     max_tokens=512,
                     n=1  
                     )

@@ -28,8 +28,11 @@ def create_csv_from_simulation_results(sim_data, file_path= "./simulations"):
 
     data=sim_data
     survey_id = data.get("_id", "Survey")
-    simulation_results = data.get('Simulation Result', [])
-    # simulation_results = [json.loads(data) for data in sim_data["Simulation Result"]]
+    try:
+        simulation_results = data.get('Simulation Result', [])
+    except Exception as e:
+        print("Old file format detected. Attempting to extract simulation results from the file.")
+        simulation_results = [json.loads(data) for data in sim_data["Simulation Result"]]
 
     # File name using the survey_id
     file_name = f"{file_path}/{survey_id}_Simulation_Results.csv"
