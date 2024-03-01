@@ -20,6 +20,7 @@ class Simulator():
         self.survey_context: str = survey["description"]
         self.survey_questions: List[Dict] = survey["questions"]
         self.demographic: Dict = demographic
+        self.simulator = response_agent.Agent(instruction="You are behaving like a real person.", model = "gpt-3.5-turbo-0125", json_mode = True)
 
     def simulate(self) -> Dict:
     
@@ -29,10 +30,9 @@ class Simulator():
         survey_questions: List[Dict] = self.survey_questions
 
 
-        simulator = response_agent.Agent(instruction="You are behaving like a real person.", model = "gpt-3.5-turbo-0125", json_mode = True)
-        simulator.inject_memory(survey_context)
+        self.simulator.inject_memory(survey_context)
         for k, v in self.demographic.items():
-            simulator.inject_memory(f"{k}: {v}")
+            self.simulator.inject_memory(f"{k}: {v}")
         
 
         for question in survey_questions:
@@ -42,7 +42,7 @@ class Simulator():
             for _ in range(retries):
 
                 try:
-                    response = simulator.chat(query=prompt)
+                    response = self.simulator.chat(query=prompt)
                     response_json = json.loads(response)
                     answer = response_json["answer"]
                     question_schema["answer"] = answer

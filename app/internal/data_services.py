@@ -24,11 +24,12 @@ def clean_up_csv(filename):
     # Save the cleaned dataframe
     df.to_csv(filename, index=False)
 
-def create_csv_from_simulation_results(sim_data: Dict, file_path= "./simulations"):
-    # Extract the survey name and simulation results
+def create_csv_from_simulation_results(sim_data, file_path= "./simulations"):
+
     data=sim_data
     survey_id = data.get("_id", "Survey")
     simulation_results = data.get('Simulation Result', [])
+    # simulation_results = [json.loads(data) for data in sim_data["Simulation Result"]]
 
     # File name using the survey_id
     file_name = f"{file_path}/{survey_id}_Simulation_Results.csv"

@@ -70,8 +70,7 @@ async def new_simulation(sim_param: SimulationParameters,
 
 
         try:
-            # background_tasks.add_task(runner.run_simulation, survey_object, demo_object, n_of_runs, sim_id, n_of_workers)
-            runner.run_simulation(survey_object, demo_object, n_of_runs, sim_id, n_of_workers)
+            background_tasks.add_task(runner.run_simulation, survey_object, demo_object, n_of_runs, sim_id, n_of_workers)
         except Exception as e:
             raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
 
