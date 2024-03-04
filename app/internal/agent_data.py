@@ -20,6 +20,7 @@ nlp = spacy.load("en_core_web_sm")
 openai.api_key = settings.OPEN_AI_KEY
 
 
+
 class Chunk(pydantic.BaseModel):
     parent_DataStr_id: uuid.UUID
     Chunk_id: uuid.UUID
@@ -113,6 +114,23 @@ class AgentData:
             self.L2_conjugate_matrix = self.conjugate_matrix/np.linalg.norm(self.conjugate_matrix, axis=1, keepdims=True)
             self.L2_diagnolized = np.diag(np.linalg.eig(self.L2_conjugate_matrix)[0])
     
+    # def chunk_group_reconstruct(self, chunk: Chunk) -> str:
+    #     #find a configuration of chunk sequence with the highest total similarity
+    #     def generate_chunk_sequence(chunk:Chunk) -> List[Chunk]:
+    #         #generate the configuration sequence of 10 chunks via greedy search
+    #         initial_chunk=chunk
+    #         sequence = [initial_chunk]
+    #         for _ in range(9):
+                
+    #             next_chunk_index =  np.argmax(initial_chunk.conjugate_vector)
+    #             if next_chunk_index == initial_chunk.index:
+    #                 break
+    #             else:
+    #                 next_chunk = self.DataChunks[next_chunk_index]
+    #                 sequence.append(next_chunk)
+    #                 initial_chunk = next_chunk
+
+
 
     def local_datastr_reconstruct(self, chunk: Chunk, query_string: str) -> str:
             
@@ -276,7 +294,6 @@ class AgentData:
             top_5: List[int] = sorted(query_conjugate_vector.tolist(),reverse=True)[0:5]
             return top_5
             
-
     def L1_query(self, query_string:str) -> List[str]:
         
         if len(self.DataChunks) == 0:
@@ -287,25 +304,35 @@ class AgentData:
             top_5 = sorted(enumerate(query_conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:5]
             target_chunk_list = [self.DataChunks[index] for index, _ in top_5]
             
-            
             reconstructed_strings = []
             with ProcessPoolExecutor(max_workers=len(target_chunk_list)) as executor:
                 futures = {executor.submit(self.local_datastr_reconstruct, target_chunk, query_string) for target_chunk in target_chunk_list}
                 for future in as_completed(futures):
                     reconstructed_strings.append(future.result())
-                
-            
-            #compute relative similarity of reconstructed strings to each other
-            # for string in reconstructed_strings:
-            #     string_embeddings = []
-            #     with ThreadPoolExecutor(max_workers=len(reconstructed_strings)) as executor:
-            #         string_embeddings = list(executor.map(self.embed_text, reconstructed_strings))
-            #     matrix = np.vstack(string_embeddings)
-            #     cosine_similarities = cs(matrix)
-                
+
                 
             return reconstructed_strings
 
+
+
+    
+    def fast_query(self, query_string: str) -> List[str]:
+        def chunk_group_reconstruct( chunk: Chunk) -> str:
+            top_5 = sorted(enumerate(chunk.conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:5]
+            target_chunk_list = [self.DataChunks[index] for index, _ in top_5]
+            string_group = "\n".join([chunk.string for chunk in target_chunk_list])
+            return string_group
+        if len(self.DataChunks) == 0:
+            return None
+        else:
+            query_embedding = self.embed_large_text(query_string)
+            query_conjugate_vector = self.compute_conjugate_vector(query_embedding)
+            top_5 = sorted(enumerate(query_conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:5]
+            target_chunk_list = [self.DataChunks[index] for index, _ in top_5]
+            reconstructed_strings = []
+            for target_chunk in target_chunk_list:
+                reconstructed_strings.append(chunk_group_reconstruct(target_chunk))
+            return reconstructed_strings
 
     def add_data_str(self, input_string: str):
 
@@ -363,7 +390,7 @@ class AgentData:
         else:
             relatedness = self.L0_query(input_string)[0]
             if relatedness >= evalutator_k:
-                return self.L1_query(input_string)
+                return self.fast_query(input_string)
             else:
                 return None
 

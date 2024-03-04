@@ -60,7 +60,7 @@ class Agent:
                 for string in recalled_information:
                     self.st_memory.append(string)
         else:   
-            current_memory = ' '.join(self.st_memory)
+            current_memory = '\n'.join(self.st_memory)
             k = self.evaluator(query, current_memory)
             recalled_information = self.lt_memory.query(query, evalutator_k=k)
             if recalled_information is not None:
@@ -76,11 +76,15 @@ class Agent:
         similarity_scores = []
         with ThreadPoolExecutor(max_workers=len(self.st_memory)) as executor:
             similarity_scores = list(executor.map(lambda x: self.evaluator(query, x), self.st_memory))
+        
+        new_lt_memory: List[str] = []
         while self.st_memory_length() > self.st_memory_capacity:
             index = similarity_scores.index(min(similarity_scores))
             forgotten_memory = self.st_memory.pop(index)
             similarity_scores.pop(index)
-            self.lt_memory.add_data_str(forgotten_memory)
+            new_lt_memory.append(forgotten_memory)
+        new_lt_memory = '\n'.join(new_lt_memory)
+        self.lt_memory.add_data_str(new_lt_memory)
             
 
     def model_response(self, query: str) -> str:
