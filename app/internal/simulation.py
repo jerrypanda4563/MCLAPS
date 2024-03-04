@@ -15,12 +15,12 @@ import time
 
 class Simulator():
 
-    def __init__(self,survey: Dict, demographic: Dict):
+    def __init__(self,survey: Dict, demographic: Dict, agent_model:str, agent_temperature:float):
         self.survey_responses: List[Dict] = []
         self.survey_context: str = survey["description"]
         self.survey_questions: List[Dict] = survey["questions"]
         self.demographic: Dict = demographic
-        self.simulator = response_agent.Agent(instruction="You are behaving like a real person.", model = "gpt-3.5-turbo-0125", json_mode = True)
+        self.simulator = response_agent.Agent(instruction="You are behaving like a real person.", model = agent_model, temperature = agent_temperature, json_mode = True)
 
     def simulate(self) -> Dict:
     

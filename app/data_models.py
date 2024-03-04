@@ -98,9 +98,20 @@ class SurveyModel(BaseModel):
             raise ValueError('Invalid question type')
         return v
 
+
+class AgentParameters(BaseModel):
+    agent_model: Optional[str] = "gpt-3.5-turbo-0125"
+    agent_temperature: Optional[float] = 1.21
+    class Config:
+        extra="forbid"
+
+    
+
+
 class SimulationParameters(BaseModel):
     demographic_params: DemographicModel
     survey_params: SurveyModel
+    agent_params: AgentParameters
     n_of_runs: int
     workers: Optional[int] = 5
     class Config:

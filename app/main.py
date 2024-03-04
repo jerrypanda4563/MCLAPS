@@ -66,11 +66,16 @@ async def new_simulation(sim_param: SimulationParameters,
             "description": survey_params.description,
             "questions": [json.loads(question.json()) for question in survey_params.questions]
         }
+
         demo_object = json.loads(demographic_params.json())
+
+        agent_model = sim_param.agent_params.agent_model
+        agent_temperature = sim_param.agent_params.agent_temperature
+        
 
 
         try:
-            background_tasks.add_task(runner.run_simulation, survey_object, demo_object, n_of_runs, sim_id, n_of_workers)
+            background_tasks.add_task(runner.run_simulation, survey_object, demo_object, agent_model, agent_temperature, n_of_runs, sim_id, n_of_workers)
         except Exception as e:
             raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
 

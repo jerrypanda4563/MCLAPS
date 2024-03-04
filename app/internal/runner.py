@@ -11,15 +11,15 @@ from app.internal.demgen import Demographic_Generator
 
 
 
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
-def run_simulation(survey: Dict, demographic_parameters: Dict, n_of_runs: int, sim_id: str, n_workers: Optional[int]=5) -> bool:
+def run_simulation(survey: Dict, demographic_parameters: Dict, agent_model: str, agent_temperature: float, n_of_runs: int, sim_id: str, n_workers: Optional[int]=5) -> bool:
     
     database = mongo_db.collection_simulations
     demographic_generator=Demographic_Generator(demo=demographic_parameters, n_of_results=n_of_runs)
     demographic_profiles=demographic_generator.generate_demographic_dataset()
     print("demographic profiles generated")
-    simulation_instances = [simulation.Simulator(survey=survey, demographic=demo) for demo in demographic_profiles]
+    simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_model=agent_model, agent_temperature=agent_temperature) for demo in demographic_profiles]
     print("simulation instances created")
     n_of_completed_runs = 0
 

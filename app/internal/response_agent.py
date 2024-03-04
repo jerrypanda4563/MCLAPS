@@ -18,12 +18,13 @@ nlp = spacy.load("en_core_web_sm")
 
 class Agent:
 
-    def __init__(self, instruction:str, model:Optional[str] = "gpt-4-turbo-preview", json_mode:Optional[bool] = True):
+    def __init__(self, instruction:str, model:Optional[str] = "gpt-3.5-turbo-0125", temperature: Optional[float] = 1.21, json_mode:Optional[bool] = True):
         self.lt_memory = agent_data.AgentData()
         self.st_memory: List[str] = []
         self.st_memory_capacity: int = 2000
         self.instruction:str = instruction
         self.llm_model = model
+        self.temperature = temperature
         self.json_mode = json_mode
     
     def embed(self, string:str) -> np.ndarray:
@@ -92,7 +93,7 @@ class Agent:
                             {"role": "system", "content": self.instruction},
                             {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query in json:/n"+query},
                         ],
-                    temperature=1.21,
+                    temperature=self.temperature,
                     max_tokens=512,
                     n=1  
                     )
@@ -105,7 +106,7 @@ class Agent:
                             {"role": "system", "content": self.instruction},
                             {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query:/n"+query},
                         ],
-                    temperature=1.21,
+                    temperature=self.temperature,
                     max_tokens=512,
                     n=1  
                     )
