@@ -132,7 +132,7 @@ async def load_simulation_csv(sim_id: str, file_path = "./simulations"):
 
             if not os.path.isfile(file_path):
                 raise HTTPException(status_code=404, detail="CSV file not found.")
-            return FileResponse(path=file_path, media_type='text/csv', filename=f"{sim_id}_Simulation_Results.csv")
+            return FileResponse(path=file_path, media_type='text/csv', filename=f"{obj["Survey Name"]}_{sim_id}_Simulation_Results.csv")
         else:
             raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
     else:
