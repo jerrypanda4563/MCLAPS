@@ -23,6 +23,8 @@ class Simulator():
         self.demographic: Dict = demographic
         self.simulator = response_agent.Agent(instruction="You are behaving like a real person.", model = agent_model, temperature = agent_temperature, json_mode = True)
         self.wait_lock = Lock()
+    
+    
     def simulate(self) -> Dict:
     
         retries = 3

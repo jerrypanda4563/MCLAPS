@@ -213,6 +213,7 @@ class Demographic_Generator():
         self.schema: Dict = response_schema
         self.n_of_errors: int = 0
         self.wait_lock=Lock()
+        self.should_wait = False
     
     def response_validator(self, demo_profile: str) -> bool: 
         if demo_profile is None:
@@ -236,14 +237,19 @@ class Demographic_Generator():
     def generate_profile(self) -> Dict:
         demo = None  # Initialize demo to an invalid value
         while not self.response_validator(demo):
+            with self.wait_lock:
+                if self.should_wait:
+                    time.sleep(60)  # Wait if flagged to do so
+                    self.should_wait = False  # Reset wait flag after waiting
             try:
                 demo = generate_demographic(self.demo)
             except (openai.error.ServiceUnavailableError, openai.error.Timeout, openai.error.RateLimitError) as e:
                 print(f'OpenAI error {e}')
+                with self.wait_lock:  # Flag all threads to wait on encountering an error
+                    self.should_wait = True
                 wait_time=60
                 print (f'Waiting for {wait_time} seconds before resuming.')
-                with self.wait_lock:
-                    time.sleep(wait_time)
+                time.sleep(wait_time)
             except Exception as e:
                 print(f"An error occurred while generating demographic profile: {e}")
         demo_data = json.loads(demo)
