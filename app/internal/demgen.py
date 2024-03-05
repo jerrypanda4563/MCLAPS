@@ -7,6 +7,7 @@ from app import settings
 from concurrent.futures import ThreadPoolExecutor
 import openai.error
 import time
+from threading import Lock
 
 openai.api_key = settings.OPEN_AI_KEY
 
@@ -211,6 +212,7 @@ class Demographic_Generator():
         self.demographic_data: List[Dict] = []
         self.schema: Dict = response_schema
         self.n_of_errors: int = 0
+        self.wait_lock=Lock()
     
     def response_validator(self, demo_profile: str) -> bool: 
         if demo_profile is None:
@@ -236,21 +238,12 @@ class Demographic_Generator():
         while not self.response_validator(demo):
             try:
                 demo = generate_demographic(self.demo)
-            except openai.error.ServiceUnavailableError as e:
-                print(f'OpenAI Service unavailable error {e}')
+            except (openai.error.ServiceUnavailableError, openai.error.Timeout, openai.error.RateLimitError) as e:
+                print(f'OpenAI error {e}')
                 wait_time=60
-                time.sleep(wait_time)
                 print (f'Waiting for {wait_time} seconds before resuming.')
-            except openai.error.Timeout as e:
-                print(f'OpenAI Timeout error')
-                wait_time=60
-                time.sleep(wait_time)
-                print (f'Waiting for {wait_time} seconds before resuming.')
-            except openai.error.RateLimitError as e:
-                print(f'OpenAI Rate limit error')
-                wait_time=60
-                time.sleep(wait_time)
-                print (f'Waiting for {wait_time} seconds before resuming.')
+                with self.wait_lock:
+                    time.sleep(wait_time)
             except Exception as e:
                 print(f"An error occurred while generating demographic profile: {e}")
         demo_data = json.loads(demo)
