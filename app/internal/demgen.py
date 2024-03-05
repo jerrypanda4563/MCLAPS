@@ -226,9 +226,27 @@ class Demographic_Generator():
         
         
     def generate_profile(self) -> Dict:
-        demo = generate_demographic(self.demo)
+        demo = None  # Initialize demo to an invalid value
         while not self.response_validator(demo):
-            demo = generate_demographic(self.demo)
+            try:
+                demo = generate_demographic(self.demo)
+            except openai.error.ServiceUnavailableError as e:
+                print(f'OpenAI Service unavailable error {e}')
+                wait_time=60
+                time.sleep(wait_time)
+                print (f'Waiting for {wait_time} seconds before resuming.')
+            except openai.error.Timeout as e:
+                print(f'OpenAI Timeout error')
+                wait_time=60
+                time.sleep(wait_time)
+                print (f'Waiting for {wait_time} seconds before resuming.')
+            except openai.error.RateLimitError as e:
+                print(f'OpenAI Rate limit error')
+                wait_time=60
+                time.sleep(wait_time)
+                print (f'Waiting for {wait_time} seconds before resuming.')
+            except Exception as e:
+                print(f"An error occurred while generating demographic profile: {e}")
         demo_data = json.loads(demo)
         return demo_data
         
@@ -237,25 +255,6 @@ class Demographic_Generator():
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
             future_to_profile = {executor.submit(self.generate_profile): _ for _ in range(self.n_of_results)}
             for future in future_to_profile:
-                try:
-                    profile = future.result()
-                    self.demographic_data.append(profile)
-                except openai.error.ServiceUnavailableError as e:
-                    print(f'OpenAI Service unavailable error {e}')
-                    wait_time=60
-                    time.sleep(wait_time)
-                    print (f'Waiting for {wait_time} seconds before resuming.')
-                except openai.error.Timeout as e:
-                    print(f'OpenAI Timeout error')
-                    wait_time=60
-                    time.sleep(wait_time)
-                    print (f'Waiting for {wait_time} seconds before resuming.')
-                except openai.error.RateLimitError as e:
-                    print(f'OpenAI Rate limit error')
-                    wait_time=60
-                    time.sleep(wait_time)
-                    print (f'Waiting for {wait_time} seconds before resuming.')
-                except Exception as e:
-                    print(f"An error occurred while generating demographic profile: {e}")
-        
+                profile = future.result()
+                self.demographic_data.append(profile)
         return self.demographic_data
