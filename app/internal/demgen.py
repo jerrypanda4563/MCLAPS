@@ -210,6 +210,7 @@ class Demographic_Generator():
         self.n_of_results = n_of_results
         self.demographic_data: List[Dict] = []
         self.schema: Dict = response_schema
+        self.n_of_errors: int = 0
     
     def response_validator(self, demo_profile: str) -> bool: 
         if demo_profile is None:
@@ -219,12 +220,14 @@ class Demographic_Generator():
                 profile_dict = json.loads(demo_profile)
             except Exception as e:
                 print(f"JSON string formatting incorrect: {e}")
+                self.n_of_errors += 1
                 return False
             
-            for k_dict, k_schema in zip(profile_dict.keys(), self.schema.keys()):
-                if k_dict != k_schema:
-                    print(f"Incorrect response schema {k_dict}.")
-                    return False 
+            if set(profile_dict.keys()) != set(self.schema.keys()):
+                print(f"Incorrect response schema.")
+                self.n_of_errors += 1
+                return False
+            
             return True
         
         
@@ -253,6 +256,7 @@ class Demographic_Generator():
         demo_data = json.loads(demo)
         return demo_data
         
+    
     def generate_demographic_dataset(self) -> List[Dict]:
         num_workers = max(self.n_of_results, 20)
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
@@ -260,4 +264,6 @@ class Demographic_Generator():
             for future in future_to_profile:
                 profile = future.result()
                 self.demographic_data.append(profile)
+                n_of_profiles_generated = len(self.demographic_data)
+                print(f"Generated {n_of_profiles_generated} of {self.n_of_results} profiles. Number of errors: {self.n_of_errors}.")
         return self.demographic_data
