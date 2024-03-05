@@ -212,17 +212,20 @@ class Demographic_Generator():
         self.schema: Dict = response_schema
     
     def response_validator(self, demo_profile: str) -> bool: 
-        try:
-            profile_dict = json.loads(demo_profile)
-        except Exception as e:
-            print(f"JSON string formatting incorrect: {e}")
+        if demo_profile is None:
             return False
-        
-        for k_dict, k_schema in zip(profile_dict.keys(), self.schema.keys()):
-            if k_dict != k_schema:
-                print(f"Incorrect response schema {k_dict}.")
-                return False 
-        return True
+        else:
+            try:
+                profile_dict = json.loads(demo_profile)
+            except Exception as e:
+                print(f"JSON string formatting incorrect: {e}")
+                return False
+            
+            for k_dict, k_schema in zip(profile_dict.keys(), self.schema.keys()):
+                if k_dict != k_schema:
+                    print(f"Incorrect response schema {k_dict}.")
+                    return False 
+            return True
         
         
     def generate_profile(self) -> Dict:
