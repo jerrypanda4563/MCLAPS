@@ -5,7 +5,7 @@ from typing import Dict, List
 import json
 import openai.error
 import time
-from multiprocessing import Lock
+
 
 
 #when an instance is ran, return a response_data json object containing responses and demographic data
@@ -22,7 +22,6 @@ class Simulator():
         self.survey_questions: List[Dict] = survey["questions"]
         self.demographic: Dict = demographic
         self.simulator = response_agent.Agent(instruction="You are behaving like a real person.", model = agent_model, temperature = agent_temperature, json_mode = True)
-        self.wait_lock = Lock()
     
     
     def simulate(self) -> Dict:
@@ -56,9 +55,8 @@ class Simulator():
                 except (openai.error.ServiceUnavailableError, openai.error.Timeout, openai.error.RateLimitError) as e:
                     print(f'OpenAI error (Attempt {_ + 1}): {json.dumps(question_schema)}. {e}')
                     wait_time=60
-                    print (f'Waiting for {wait_time} seconds before resuming.')
-                    with self.wait_lock:
-                        time.sleep(wait_time)
+                    print (f'Waiting for {wait_time} seconds before resuming.')                   
+                    time.sleep(wait_time)
                 except Exception as e:
                     print(f"Error in generating response (Attempt {_ + 1}): {json.dumps(question_schema)}. {e}")
                     traceback.print_exc()  
