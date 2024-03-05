@@ -257,7 +257,10 @@ class Demographic_Generator():
         
     
     def generate_demographic_dataset(self) -> List[Dict]:
-        num_workers = max(self.n_of_results, 20)
+        if self.n_of_results < 50:
+            num_workers = self.n_of_results
+        else:
+            num_workers = 50
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
             future_to_profile = {executor.submit(self.generate_profile): _ for _ in range(self.n_of_results)}
             for future in future_to_profile:
