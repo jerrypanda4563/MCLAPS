@@ -5,7 +5,7 @@ from typing import Dict, List
 import json
 import openai.error
 import time
-from threading import Lock
+from multiprocessing import Lock
 
 
 #when an instance is ran, return a response_data json object containing responses and demographic data
