@@ -314,8 +314,6 @@ class AgentData:
             return reconstructed_strings
 
 
-
-    
     def fast_query(self, query_string: str) -> List[str]:
         def chunk_group_reconstruct( chunk: Chunk) -> str:
             top_5 = sorted(enumerate(chunk.conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:5]
@@ -333,6 +331,8 @@ class AgentData:
             for target_chunk in target_chunk_list:
                 reconstructed_strings.append(chunk_group_reconstruct(target_chunk))
             return reconstructed_strings
+
+
 
     def add_data_str(self, input_string: str):
 
