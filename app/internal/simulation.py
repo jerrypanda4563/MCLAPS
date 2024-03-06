@@ -50,6 +50,8 @@ class Simulator():
                     question_schema["answer"] = answer
                     self.survey_responses.append(question_schema)
                     break
+                except KeyError:
+                    print(f"'answer' not found in response {response_json} (Attempt {_ + 1}).")
                 except json.JSONDecodeError:
                     print(f"Error decoding the response JSON (Attempt {_ + 1}).")
                 except (openai.error.ServiceUnavailableError, openai.error.Timeout, openai.error.RateLimitError) as e:
