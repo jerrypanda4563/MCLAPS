@@ -4,17 +4,14 @@ from typing import Dict, Optional
 import time
 
 import app.mongo_config as mongo_db
-
 from app.internal import simulation
+
 from app.internal.demgen import Demographic_Generator
-
-
-
-
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 def run_simulation(survey: Dict, demographic_parameters: Dict, agent_model: str, agent_temperature: float, n_of_runs: int, sim_id: str, n_workers: Optional[int]=5) -> bool:
     
+
     database = mongo_db.collection_simulations
     demographic_generator=Demographic_Generator(demo=demographic_parameters, n_of_results=n_of_runs)
     demographic_profiles=demographic_generator.generate_demographic_dataset()
