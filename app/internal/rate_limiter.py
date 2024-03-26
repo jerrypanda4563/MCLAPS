@@ -12,8 +12,8 @@ class OpenAIUsageMonitor():
         
 
         #defining limits per minute
-        self.embedding_token_limit: int = 10000000
-        self.chat_token_limit: int = 2000000
+        self.embedding_token_limit: int = 10000000   
+        self.chat_token_limit: int = 2000000   
         self.embedding_request_limit: int = 10000
         self.chat_request_limit: int = 10000
 
@@ -34,6 +34,7 @@ class OpenAIUsageMonitor():
 
         self.start_time = time.time()
         self.stop_signal = threading.Event()
+        self.timer_thread = None
 
 
     def initiate_counter(self):
@@ -57,14 +58,17 @@ class OpenAIUsageMonitor():
                     self.chat_requests = 0
                 
                 time.sleep(0.1)
-        thread = threading.Thread(target=timer, daemon=True)
-        thread.start()
+        self.timer_thread = threading.Thread(target=timer, daemon=True)
+        self.timer_thread.start()
     
     def stop_counter(self):
         self.stop_signal.set()  # Signal the thread to stop
         self.timer_thread.join()  # Wait for the thread to actually stop
 
-
+    def check_time(self):
+        reset_time = 60 - (time.time() - self.start_time)
+        return reset_time
+    
     def check_chat_status(self) -> bool:
         if self.chat_tokens_used >= round(0.98*self.chat_token_limit):
             return False

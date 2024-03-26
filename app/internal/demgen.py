@@ -4,6 +4,8 @@ from typing import Dict, Literal, Optional, List
 from pydantic import BaseModel
 from app.internal.tokenizer import count_tokens
 from app import settings
+from app.internal.rate_limiter import limiter
+import time
 from concurrent.futures import ThreadPoolExecutor
 import openai.error
 import time
@@ -127,7 +129,7 @@ response_schema = {
         "Political Engagement": "str"
         }
 
-
+#add limiter
 def generate_demographic(demo: Dict, response_model: Optional[str] = "gpt-3.5-turbo-0125"):
     prompt_data = {
         "Sex at Birth": demo["sex_at_birth"],
@@ -186,23 +188,47 @@ def generate_demographic(demo: Dict, response_model: Optional[str] = "gpt-3.5-tu
     
     system_prompt = json.dumps({k: v for k, v in prompt_data.items() if v is not None})
     prompt = "General demographic group:\n" + system_prompt + "\nJSON Response schema:\n"+schema
-    response = openai.ChatCompletion.create(
-        model=response_model,
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system",
-             "content": "Create a demographic profile of an individual belonging to a general demographic group. You must follow the JSON response schema provided."},
-            {"role": "user",
-             "content": prompt}
-        ],
-        temperature=1.3,
-        max_tokens=round(2*count_tokens(schema)),
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0
-    )
-    demographic_profile = response.choices[0].message.content
-    return demographic_profile
+    if limiter.check_chat_status():
+        response = openai.ChatCompletion.create(
+            model=response_model,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system",
+                "content": "Create a demographic profile of an individual belonging to a general demographic group. You must follow the JSON response schema provided."},
+                {"role": "user",
+                "content": prompt}
+            ],
+            temperature=1.3,
+            max_tokens=round(2*count_tokens(schema)),
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+        limiter.new_response(response)
+        demographic_profile = response.choices[0].message.content
+        return demographic_profile
+    else:
+        wait_time = limiter.check_time()
+        print(f"Approaching chat model rate limit, waiting for {wait_time} seconds")
+        time.sleep(wait_time)
+        response = openai.ChatCompletion.create(
+            model=response_model,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system",
+                "content": "Create a demographic profile of an individual belonging to a general demographic group. You must follow the JSON response schema provided."},
+                {"role": "user",
+                "content": prompt}
+            ],
+            temperature=1.3,
+            max_tokens=round(2*count_tokens(schema)),
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+        limiter.new_response(response)
+        demographic_profile = response.choices[0].message.content
+        return demographic_profile
 
 
 class Demographic_Generator():

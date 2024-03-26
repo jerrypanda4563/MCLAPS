@@ -1,6 +1,7 @@
 import traceback
 import json
 from typing import Dict, Optional
+from app.internal.rate_limiter import limiter
 import time
 
 import app.mongo_config as mongo_db
@@ -11,6 +12,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 def run_simulation(survey: Dict, demographic_parameters: Dict, agent_model: str, agent_temperature: float, n_of_runs: int, sim_id: str, n_workers: Optional[int]=5) -> bool:
     
+    limiter.initiate_counter()    #start limiter
 
     database = mongo_db.collection_simulations
     demographic_generator=Demographic_Generator(demo=demographic_parameters, n_of_results=n_of_runs)
@@ -36,6 +38,7 @@ def run_simulation(survey: Dict, demographic_parameters: Dict, agent_model: str,
                     run_status = False
                     database.update_one(query, {"$set":{"Run Status": run_status}})
                     print(f"All runs completed for simulation {sim_id}.")
+                    limiter.stop_counter()  #stop limiter
                     return True
                 
     except Exception as e:

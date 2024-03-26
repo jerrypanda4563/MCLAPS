@@ -1,6 +1,7 @@
 from app.internal import chunking
 from app.internal.tokenizer import count_tokens
 from app import settings
+from app.internal.rate_limiter import limiter
 from sklearn.metrics.pairwise import cosine_similarity as cs
 from openai import Embedding
 import openai
@@ -13,6 +14,7 @@ import spacy
 from concurrent.futures import as_completed, ProcessPoolExecutor, ThreadPoolExecutor
 from matplotlib import pyplot as plt
 import math
+import time
 
 
 nlp = spacy.load("en_core_web_sm")
@@ -75,13 +77,29 @@ class AgentData:
         self.L2_conjugate_matrix: np.ndarray = np.array([[]]) 
         self.L2_diagnolized: np.ndarray = np.array([[]]) 
 
+    #add limiter
     def embed_large_text(self, text: str) -> np.ndarray:
-        response=Embedding.create(
-            model="text-embedding-3-small",
-            input=str(text)
-            )
-        embedding = np.array(response['data'][0]['embedding'])
-        return embedding
+        if limiter.check_embedding_status():
+            response=Embedding.create(
+                model="text-embedding-3-small",
+                input=str(text)
+                )
+            embedding = np.array(response['data'][0]['embedding'])
+            limiter.new_response(response)
+            return embedding
+        else:
+            wait_time = limiter.check_time()
+            print(f"Approaching embedding rate limit, waiting for {wait_time} seconds")
+            time.sleep(wait_time)
+            response=Embedding.create(
+                model="text-embedding-3-small",
+                input=str(text)
+                )
+            embedding = np.array(response['data'][0]['embedding'])
+            limiter.new_response(response)
+            return embedding
+
+
 
     def embed_text(self, text: str) -> np.ndarray:
         processed_text = nlp(text)
