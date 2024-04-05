@@ -1,100 +1,83 @@
-from app.internal import agent, demgen
-from typing import Dict
+from app.internal import response_agent 
+import traceback
+from typing import Dict, List
+
 import json
 import openai.error
 import time
 
 
-class MaxRetry(Exception):
-    pass
+
+#when an instance is ran, return a response_data json object containing responses and demographic data
+#this is the part that can be setup as a celery task, so json as input and output
 
 
-### class simulate implementing exception handling, creates a single instances of demo and agent, input is survey plus all dem param
 
 
-class Simulation():
-    def __init__(self, survey: list, demo: Dict, context=None):
-        # input
-        self.survey = survey  # must be a list of dict
-        self.survey_context = context  # str
-        # temp memory for storing output
-        self.demographic = demo
-        self.demographic_data = {}
-        self.responses = []
+class Simulator():
+
+    def __init__(self,survey: Dict, demographic: Dict, agent_model:str, agent_temperature:float):
+        self.survey_responses: List[Dict] = []
+        self.survey_context: str = survey["description"]
+        self.survey_questions: List[Dict] = survey["questions"]
+        self.demographic: Dict = demographic
+        self.simulator = response_agent.Agent(instruction="You are behaving like a real person.", model = agent_model, temperature = agent_temperature, json_mode = True)
+    
+    
+    def simulate(self) -> Dict:
+    
+        retries = 3
+
+        survey_context: str = self.survey_context
+        survey_questions: List[Dict] = self.survey_questions
 
 
-    def run(self):
-        max_retries = 3  # Set maximum number of retries
+        self.simulator.inject_memory(survey_context)
+        for k, v in self.demographic.items():
+            self.simulator.inject_memory(f"{k}: {v}")
+        
 
-        # Retry block for generating demographic
-        for _ in range(max_retries):
-            try:
-                demo = demgen.generate_demographic(self.demographic)
-                break
+        for question in survey_questions:
+            question_schema = question
+            prompt = question_schema["question"] + "\nResponse schema:\n" + json.dumps(question_schema)
 
-            except openai.error.RateLimitError as e:
-                    print(f'Rate limit error (Attempt {_ + 1}): {e}')
-                    wait_time=10
-                    time.sleep(wait_time)
-                    print (f'Waiting for {wait_time} before resuming.')
-                    
+            for _ in range(retries):
 
-            except Exception as e:
-                print(f"Error in generating demographic (Attempt {_ + 1}): {e}")
-        else:  # This else block is executed if the loop ends without a break
-            print("Maximum retries reached for generating demographic.")
-            raise MaxRetry("Maximum retries reached for generating demographic.")
-        # End of retry block
-
-
-        #  block for loading demographic data
-        try:
-            self.demographic_data.update(json.loads(demo))
-        except json.JSONDecodeError:
-            print(f"Error decoding the generated demographic JSON (Attempt {_ + 1}).")
-        except Exception as e:
-            print(f"Error in updating demographic data (Attempt {_ + 1}): {e}")
-
-        # End of block
-
-
-        # initiating simulation agent
-        simulator = agent.Agent(
-            "You are a person with the following demographic characteristics expressed as a json dictionary:" + demo + "\nRespond to the following survey questions expressed as a list of json dictionaries by replacing null values with your answer. Your output must maintain the same data structure as the input.")
-        if isinstance(self.survey_context, str):
-            simulator.inject_memory(self.survey_context)
-
-        # iterating through questions list
-        for question in self.survey:
-            prompt = json.dumps(question)
-
-            # Retry block for generating response
-            for _ in range(max_retries):
                 try:
-                    response = simulator.chat(prompt)
+                    response = self.simulator.chat(query=prompt)
+                    response_json = json.loads(response)
+                    answer = response_json["answer"]
+                    question_schema["answer"] = answer
+                    self.survey_responses.append(question_schema)
                     break
-                
-                except openai.error.RateLimitError as e:
-                    print(f'Rate limit error (Attempt {_ + 1}): {question}. {e}')
-                    wait_time=10
+                except KeyError:
+                    print(f"'answer' not found in response {response_json} (Attempt {_ + 1}).")
+                except json.JSONDecodeError:
+                    print(f"Error decoding the response JSON (Attempt {_ + 1}).")
+                except (openai.error.ServiceUnavailableError, openai.error.Timeout, openai.error.RateLimitError) as e:
+                    print(f'OpenAI error (Attempt {_ + 1}): {json.dumps(question_schema)}. {e}')
+                    wait_time=60
+                    print (f'Waiting for {wait_time} seconds before resuming.')                   
                     time.sleep(wait_time)
-                    print (f'Waiting for {wait_time} before resuming.')
-
                 except Exception as e:
-                    print(f"Error in chat simulation for question (Attempt {_ + 1}): {question}. Error: {e}")
+                    print(f"Error in generating response (Attempt {_ + 1}): {json.dumps(question_schema)}. {e}")
+                    traceback.print_exc()  
             else:
-                print(f"Maximum retries reached for question: {question}. Skipping to next question.")
+                print(f"Maximum retries reached for question: {json.dumps(question_schema)}. Skipping to next question.")
+                question_schema["answer"] = None
+                self.survey_responses.append(question_schema)
                 continue
-            # End of block
+        
+        simulation_result = {
+            "response_data": self.survey_responses,
+            "demographic_data": self.demographic
+        }
 
-            # try block for loading response data
-            try:
-                response_data = json.loads(response)
-                self.responses.append(response_data)
-                
-            except json.JSONDecodeError:
-                print(f"Error decoding the response JSON.")
-            except Exception as e:
-                print(f"Error processing response data: {e}")
-         
-            # End of block
+        return simulation_result
+
+
+
+    
+
+
+

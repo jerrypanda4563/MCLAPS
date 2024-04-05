@@ -1,5 +1,5 @@
 import traceback
-from typing import Dict
+from typing import Dict, Optional
 import json
 import openai.error
 import time
@@ -9,7 +9,7 @@ from app.redis_config import cache
 import app.mongo_config as mongo_db
 import app.mongo_config as mongo_config
 
-from app.internal import simulation
+from app.redundant import simulation_old
 
 from app.internal.celery import simulator
 import concurrent
@@ -21,7 +21,7 @@ import concurrent.futures
 
 def run_single_simulation(s: Dict, demo: Dict):
     try:
-        inst = simulation.Simulation(survey = s["Survey Questions"], context = s["Survey Description"], demo = demo)
+        inst = simulation_old.Simulation(survey = s["Survey Questions"], context = s["Survey Description"], demo = demo)
         inst.run()
         simulation_data = {
             "response_data": inst.responses,
@@ -31,17 +31,18 @@ def run_single_simulation(s: Dict, demo: Dict):
     
     except Exception as e:
         print(f"An error occurred in a single simulation run: {e}.")
+        traceback.print_exc()
         return None
 
 
 #@simulator.task  for setting up celery in future
-def get_simulation_data(n_of_results: int, s:Dict, demo: Dict, sim_id: str):
+def get_simulation_data(n_of_results: int, s:Dict, demo: Dict, sim_id: str, workers: Optional[int] = 15):
     
     #simulation variables
     n_of_successful_runs = 0
     max_retries = 5
     retries = 0
-    num_workers = 5
+    num_workers = workers
 
     #check mongo status before simulation
     mongo_status=mongo_config.db_connection_test()
@@ -51,7 +52,7 @@ def get_simulation_data(n_of_results: int, s:Dict, demo: Dict, sim_id: str):
 
 
     while n_of_successful_runs < n_of_results and retries < max_retries:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:  # using 4 threads, but adjust as needed
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:  
             future_to_simulation = {executor.submit(run_single_simulation, s, demo): _
                                     for _ in range(n_of_results - n_of_successful_runs)}
 
@@ -64,7 +65,7 @@ def get_simulation_data(n_of_results: int, s:Dict, demo: Dict, sim_id: str):
                         cache.rpush("r"+sim_id, json.dumps(simulation_result))
                         #############
                         print(f"Completion state:"+str(n_of_successful_runs))
-
+                
                 except Exception as e:  # exception while getting result from future
                     print(f"An error occurred in simulation runner while getting result from future: {e}. Retrying...")
                     print(traceback.format_exc())

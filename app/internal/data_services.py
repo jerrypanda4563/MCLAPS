@@ -3,6 +3,7 @@ import os
 import csv
 import pandas as pd
 from app.redis_config import cache
+from typing import Dict, List
 
 def extract_json_content(s):
     s=s.strip()
@@ -23,20 +24,15 @@ def clean_up_csv(filename):
     # Save the cleaned dataframe
     df.to_csv(filename, index=False)
 
-def create_csv_from_simulation_results(sim_id, file_path= "./simulations"):
-    # Extract the survey name and simulation results
-    data={
-        "_id":sim_id,
-        "Survey Name":(cache.hget(sim_id,"Survey Name")).decode('utf-8'),
-        "Survey Description":cache.hget(sim_id, "Survey Description").decode('utf-8'),
-        "Survey Questions": json.loads(cache.hget(sim_id, "Survey Questions").decode('utf-8')),
-        "Target Demographic": json.loads(cache.hget(sim_id, "Target Demographic").decode('utf-8')),
-        "Number of Runs": cache.hget(sim_id, "Number of Runs").decode('utf-8'),
-        "Simulation Status": cache.hget(sim_id, "Simulation Status").decode('utf-8'),
-        "Simulation Result": json.loads(cache.hget(sim_id,"Simulation Result").decode('utf-8'))
-    }
+def create_csv_from_simulation_results(sim_data, file_path= "./simulations"):
+
+    data=sim_data
     survey_id = data.get("_id", "Survey")
-    simulation_results = data.get('Simulation Result', [])
+    try:
+        simulation_results = data.get('Simulation Result', [])
+    except Exception as e:
+        print("Old file format detected. Attempting to extract simulation results from the file.")
+        simulation_results = [json.loads(data) for data in sim_data["Simulation Result"]]
 
     # File name using the survey_id
     file_name = f"{file_path}/{survey_id}_Simulation_Results.csv"
@@ -49,7 +45,7 @@ def create_csv_from_simulation_results(sim_id, file_path= "./simulations"):
         headers_written = False
         for result in simulation_results:
             # Load the JSON string
-            result_data = json.loads(result)
+            result_data = result
 
             # Extract response data
             response_data = result_data.get('response_data', [])
