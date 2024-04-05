@@ -1,7 +1,8 @@
 from app.internal import chunking
 from app.internal.tokenizer import count_tokens
 from app import settings
-from app.internal.rate_limiter import limiter
+
+
 from sklearn.metrics.pairwise import cosine_similarity as cs
 from openai import Embedding
 import openai
@@ -79,28 +80,13 @@ class AgentData:
 
     #add limiter
     def embed_large_text(self, text: str) -> np.ndarray:
-        if limiter.check_embedding_status():
-            response=Embedding.create(
-                model="text-embedding-3-small",
-                input=str(text)
-                )
-            embedding = np.array(response['data'][0]['embedding'])
-            limiter.new_response(response)
-            return embedding
-        else:
-            wait_time = limiter.check_time()
-            print(f"Approaching embedding rate limit, waiting for {wait_time} seconds")
-            time.sleep(wait_time)
-            response=Embedding.create(
-                model="text-embedding-3-small",
-                input=str(text)
-                )
-            embedding = np.array(response['data'][0]['embedding'])
-            limiter.new_response(response)
-            return embedding
-
-
-
+        response=Embedding.create(
+            model="text-embedding-3-small",
+            input=str(text)
+            )
+        embedding = np.array(response['data'][0]['embedding'])
+        return embedding
+                
     def embed_text(self, text: str) -> np.ndarray:
         processed_text = nlp(text)
         embedding = np.array(processed_text.vector)

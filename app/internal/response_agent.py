@@ -1,6 +1,5 @@
 from app.internal import agent_data
 from app.internal.tokenizer import count_tokens
-from app.internal.rate_limiter import limiter
 from app import settings
 
 import numpy as np
@@ -32,25 +31,15 @@ class Agent:
 
     #add limiter
     def embed(self, string:str) -> np.ndarray:
-        if limiter.check_embedding_status():
-            response=openai.Embedding.create(
-                model="text-embedding-3-small",
-                input=str(string)
-                )
-            embedding = np.array(response['data'][0]['embedding'])
-            limiter.new_response(response)
-            return embedding
-        else:
-            wait_time = limiter.check_time()
-            print(f"Approaching embedding rate limit, waiting for {wait_time} seconds")
-            time.sleep(wait_time)
-            response=openai.Embedding.create(
-                model="text-embedding-3-small",
-                input=str(string)
-                )
-            embedding = np.array(response['data'][0]['embedding'])
-            limiter.new_response(response)
-            return embedding
+       
+        response=openai.Embedding.create(
+            model="text-embedding-3-small",
+            input=str(string)
+            )
+
+        embedding = np.array(response['data'][0]['embedding'])
+        return embedding
+
         
 
     def evaluator(self, string1:str, string2:str) -> float:
@@ -110,73 +99,35 @@ class Agent:
 
         if self.json_mode == True:
 
-            if limiter.check_chat_status():
-                completion=openai.ChatCompletion.create(
-                        model = self.llm_model,
-                        response_format={"type": "json_object"},
-                        messages=[
-                                {"role": "system", "content": self.instruction},
-                                {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query in json:/n"+query},
-                            ],
-                        temperature=self.temperature,
-                        max_tokens=512,
-                        n=1  
-                        )
-                response=completion.choices[0].message.content
-                limiter.new_response(completion)
-                return response
-            else:
-                wait_time = limiter.check_time()
-                print(f"Approaching chat model rate limit, waiting for {wait_time} seconds")
-                time.sleep(wait_time)
-                completion=openai.ChatCompletion.create(
-                        model = self.llm_model,
-                        response_format={"type": "json_object"},
-                        messages=[
-                                {"role": "system", "content": self.instruction},
-                                {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query in json:/n"+query},
-                            ],
-                        temperature=self.temperature,
-                        max_tokens=512,
-                        n=1  
-                        )
-                response=completion.choices[0].message.content
-                limiter.new_response(completion)
-                return response
-            
+            completion=openai.ChatCompletion.create(
+                    model = self.llm_model,
+                    response_format={"type": "json_object"},
+                    messages=[
+                            {"role": "system", "content": self.instruction},
+                            {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query in json:/n"+query},
+                        ],
+                    temperature=self.temperature,
+                    max_tokens=512,
+                    n=1  
+                    )
+
+            response=completion.choices[0].message.content
+            return response
+
         else:
 
-            if limiter.check_chat_status():
-                completion=openai.ChatCompletion.create(
-                        model = self.llm_model,
-                        messages=[
-                                {"role": "system", "content": self.instruction},
-                                {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query:/n"+query},
-                            ],
-                        temperature=self.temperature,
-                        max_tokens=512,
-                        n=1  
-                        )
-                response=completion.choices[0].message.content
-                limiter.new_response(completion)
-                return response
-            else:
-                wait_time = limiter.check_time()
-                print(f"Approaching chat model rate limit, waiting for {wait_time} seconds")
-                time.sleep(wait_time)
-                completion=openai.ChatCompletion.create(
-                        model = self.llm_model,
-                        messages=[
-                                {"role": "system", "content": self.instruction},
-                                {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query:/n"+query},
-                            ],
-                        temperature=self.temperature,
-                        max_tokens=512,
-                        n=1  
-                        )
-                response=completion.choices[0].message.content
-                limiter.new_response(completion)
-                return response
+            completion=openai.ChatCompletion.create(
+                    model = self.llm_model,
+                    messages=[
+                            {"role": "system", "content": self.instruction},
+                            {"role": "user", "content": memory_prompt +"\n"+"Based on the information, you respond to the following query:/n"+query},
+                        ],
+                    temperature=self.temperature,
+                    max_tokens=512,
+                    n=1  
+                    )
+            response=completion.choices[0].message.content
+            return response
     
     
     #endpoints
