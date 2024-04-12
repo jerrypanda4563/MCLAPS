@@ -2,6 +2,7 @@ from app.internal import runner
 from app.internal import data_services
 import app.mongo_config as mongo_db
 from app.data_models import SimulationParameters
+import app.internal.mclapsrl as mclapsrl
 
 from tests import test
 from typing import Dict, List
@@ -21,6 +22,23 @@ application = FastAPI()
 @application.get("/")
 async def root():
     return{"API Connection": "Success!"}
+
+
+
+#temporary endpoint for rate limiter connection test
+@application.get("/mclapsrl_connection")
+async def test_mclapsrl() -> Dict:
+    client = mclapsrl.APIClient()
+    try:
+        print(client.check_status())
+        print(client.check_redis_connection())
+        print(client.create_counter("gpt-3.5-turbo"))
+        print(client.get_counter_status("gpt-3.5-turbo"))
+        print(client.new_response({"model": "gpt-3.5-turbo", "input_tokens": 100, "output_tokens": 50, "total_tokens": 150}))
+        print(client.get_model_status("gpt-3.5-turbo"))
+        return {"mclapsrl": "success"}
+    except Exception as e:
+        return {"mclapsrl": f"Failed: {e}"}
 
 
 @application.get("/connection_test")

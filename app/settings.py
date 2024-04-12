@@ -7,4 +7,5 @@ OPEN_AI_KEY = os.getenv("OPEN-AI-API-KEY")
 MONGO_URI= os.getenv("MONGO-URI")
 REDIS_URI = os.getenv("REDIS-URI")
 REDIS_PORT = os.getenv("REDIS-PORT")
+MCLAPSRL_API = os.getenv("MCLAPSRL-URI")
 DEBUG = os.getenv("DEBUG") == 'True'
