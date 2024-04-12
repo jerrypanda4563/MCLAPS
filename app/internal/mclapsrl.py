@@ -39,11 +39,4 @@ class APIClient:
         response = requests.get(f"{self.base_url}/model_status", params={'model': model})
         return response.json()
 
-# Example usage of the client
-client = APIClient()
-print(client.check_status())
-print(client.check_redis_connection())
-print(client.create_counter("gpt-3.5-turbo"))
-print(client.get_counter_status("gpt-3.5-turbo"))
-print(client.new_response({"model": "gpt-3.5-turbo", "input_tokens": 100, "output_tokens": 50, "total_tokens": 150}))
-print(client.get_model_status("gpt-3.5-turbo"))
+
