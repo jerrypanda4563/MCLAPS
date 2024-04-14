@@ -209,6 +209,7 @@ def generate_demographic(demo: Dict, response_model: Optional[str] = "gpt-3.5-tu
         frequency_penalty=0,
         presence_penalty=0
     )
+    print(str(dict(response)))
     rate_limiter.new_response(str(dict(response)))
     demographic_profile = response.choices[0].message.content
     return demographic_profile

@@ -90,6 +90,7 @@ class AgentData:
             input=str(text)
             )
         embedding = np.array(response['data'][0]['embedding'])
+        print(str(dict(response)))
         rate_limiter.new_response(str(dict(response)))
         return embedding
                 
