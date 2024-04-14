@@ -91,7 +91,7 @@ class AgentData:
             )
         embedding = np.array(response['data'][0]['embedding'])
 
-        rate_limiter.new_response(str(dict(response)))
+        rate_limiter.new_response(dict(response))
         return embedding
                 
     def embed_text(self, text: str) -> np.ndarray:

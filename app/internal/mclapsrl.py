@@ -46,12 +46,16 @@ class mclapsrlClient:
         return False
     
     #if new response logged, returns true, if logging failed or client is down, returns false
-    def new_response(self, response_body: str) -> bool:
+    def new_response(self, response_body: dict) -> bool:
+        if type(response_body) != dict:
+            raise ValueError("response_body must be a dict.")
+        
+
         attempts = 10
         while attempts > 0:
             try:
-                response = (requests.post(f"{self.base_url}/new_response", json={'response_body': response_body})).json()
-                if response == True:
+                response = requests.post(f"{self.base_url}/new_response", json={'response_body': response_body})
+                if response.json() == True:
                     return True
                 else:
                     print(f"Response logging failed, retrying  ({attempts} attempts remaining).")
@@ -67,8 +71,8 @@ class mclapsrlClient:
         attempts = 10
         while attempts > 0:
             try:
-                response = (requests.get(f"{self.base_url}/model_status", params={'model': model})).json()
-                return response
+                response = requests.get(f"{self.base_url}/model_status", params={'model': model})
+                return response.json()
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                 print(f"Error in mclapsrl connection: {e}, retrying ({attempts} attempts remaining).")
                 attempts -= 1
