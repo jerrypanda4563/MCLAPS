@@ -4,6 +4,34 @@ from app.data_models import open_ai_models
 
 
 
+def parse_response(response) -> dict:
+
+    try:
+        model = response.model
+    except AttributeError:
+        model = None
+    try:
+        input_tokens = response.usage.prompt_tokens
+    except AttributeError:
+        input_tokens = 0
+    try:
+        output_tokens = response.usage.completion_tokens
+    except AttributeError:
+        output_tokens = 0
+    try:    
+        total_tokens = response.usage.total_tokens
+    except AttributeError:
+        total_tokens = 0
+
+    parsed_json = {
+        "model": model,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": total_tokens
+    }
+
+    return parsed_json
+
 
 class mclapsrlClient:
     def __init__(self):
@@ -46,10 +74,9 @@ class mclapsrlClient:
         return False
     
     #if new response logged, returns true, if logging failed or client is down, returns false
-    def new_response(self, response_body: dict) -> bool:
-        if type(response_body) != dict:
-            raise ValueError("response_body must be a dict.")
+    def new_response(self, response) -> bool:
         
+        response_body = parse_response(response)
 
         attempts = 10
         while attempts > 0:

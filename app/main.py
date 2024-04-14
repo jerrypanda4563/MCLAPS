@@ -33,11 +33,11 @@ async def test_services():
     mclapsrl_status = mclapsrl_client.check_service_status()
     return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status), "RateLimiter Status": mclapsrl_status}
 
-@application.post("/mclapsrl/new_response")
-async def new_response(response_body: dict):
-    mclapsrl_client = mclapsrl.mclapsrlClient()
-    response = mclapsrl_client.new_response(response_body)
-    return {"Response": response}
+# @application.post("/mclapsrl/new_response")
+# async def new_response(response_body: dict):
+#     mclapsrl_client = mclapsrl.mclapsrlClient()
+#     response = mclapsrl_client.new_response(response_body)
+#     return {"Response": response}
 
 @application.post("/simulations/new_simulation")
 async def new_simulation(sim_param: SimulationParameters,

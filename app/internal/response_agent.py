@@ -1,6 +1,6 @@
 from app.internal import agent_data
 from app.internal.tokenizer import count_tokens
-from app.internal.mclapsrl import mclapsrlClient
+from app.internal.mclapsrl import mclapsrlClient, parse_response
 from app import settings
 
 import json
@@ -42,7 +42,7 @@ class Agent:
             input=str(string)
             )
 
-        rate_limiter.new_response(dict(response))
+        rate_limiter.new_response(response)
         embedding = np.array(response['data'][0]['embedding'])
         return embedding
 
@@ -118,7 +118,7 @@ class Agent:
                     n=1  
                     )
  
-            rate_limiter.new_response(dict(completion))
+            rate_limiter.new_response(completion)
             response = completion.choices[0].message.content
             return response
 
@@ -135,7 +135,7 @@ class Agent:
                     max_tokens=512,
                     n=1  
                     )
-            rate_limiter.new_response(dict(completion))
+            rate_limiter.new_response(completion)
             response=completion.choices[0].message.content
             return response
     
