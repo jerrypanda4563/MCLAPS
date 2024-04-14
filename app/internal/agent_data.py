@@ -2,6 +2,7 @@ from app.internal import chunking
 from app.internal.tokenizer import count_tokens
 from app import settings
 import time
+import json
 
 
 from sklearn.metrics.pairwise import cosine_similarity as cs
@@ -89,7 +90,7 @@ class AgentData:
             input=str(text)
             )
         embedding = np.array(response['data'][0]['embedding'])
-        rate_limiter.new_response(response)
+        rate_limiter.new_response(json.dumps(dict(response)))
         return embedding
                 
     def embed_text(self, text: str) -> np.ndarray:
