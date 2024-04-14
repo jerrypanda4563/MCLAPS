@@ -34,7 +34,7 @@ async def test_services():
     return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status), "RateLimiter Status": mclapsrl_status}
 
 @application.post("/mclapsrl/new_response")
-async def new_response(response_body: str):
+async def new_response(response_body: dict):
     mclapsrl_client = mclapsrl.mclapsrlClient()
     response = mclapsrl_client.new_response(response_body)
     return {"Response": response}
