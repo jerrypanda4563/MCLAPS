@@ -41,7 +41,7 @@ class Agent:
             model = embedding_model,
             input=str(string)
             )
-        rate_limiter.new_response(json.dumps(dict(response)))
+        rate_limiter.new_response(str(dict(response)))
         embedding = np.array(response['data'][0]['embedding'])
         return embedding
 
@@ -116,7 +116,7 @@ class Agent:
                     max_tokens=512,
                     n=1  
                     )
-            rate_limiter.new_response(json.dumps(dict(completion)))
+            rate_limiter.new_response(str(dict(completion)))
             response = completion.choices[0].message.content
             return response
 
@@ -133,7 +133,7 @@ class Agent:
                     max_tokens=512,
                     n=1  
                     )
-            rate_limiter.new_response(json.dumps(dict(completion)))
+            rate_limiter.new_response(str(dict(completion)))
             response=completion.choices[0].message.content
             return response
     

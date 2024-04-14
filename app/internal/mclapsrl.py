@@ -46,7 +46,7 @@ class mclapsrlClient:
         return False
     
     #if new response logged, returns true, if logging failed or client is down, returns false
-    def new_response(self, response_body) -> bool:
+    def new_response(self, response_body: str) -> bool:
         attempts = 10
         while attempts > 0:
             try:
@@ -63,7 +63,7 @@ class mclapsrlClient:
         return False
 
     #returns boolean status of model, or false if client is down, so if client is down the simulation halts indefinitely
-    def model_status(self, model) -> bool:      
+    def model_status(self, model: open_ai_models) -> bool:      
         attempts = 10
         while attempts > 0:
             try:
