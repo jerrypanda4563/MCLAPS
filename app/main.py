@@ -24,30 +24,14 @@ async def root():
     return{"API Connection": "Success!"}
 
 
-
-#temporary endpoint for rate limiter connection test
-@application.get("/mclapsrl_connection")
-async def test_mclapsrl() -> Dict:
-    client = mclapsrl.APIClient()
-    try:
-        print(client.check_status())
-        print(client.check_redis_connection())
-        print(client.create_counter("gpt-3.5-turbo"))
-        print(client.get_counter_status("gpt-3.5-turbo"))
-        print(client.new_response({"model": "gpt-3.5-turbo", "input_tokens": 100, "output_tokens": 50, "total_tokens": 150}))
-        print(client.get_model_status("gpt-3.5-turbo"))
-        return {"mclapsrl": "success"}
-    except Exception as e:
-        return {"mclapsrl": f"Failed: {e}"}
-
-
 @application.get("/connection_test")
 async def test_services():
-    
+    mclapsrl_client = mclapsrl.mclapsrlClient()
     openai_status=test.openai_connection_test()
     mongo_status=test.mongo_connection_test()
     redis_status=test.redis_connection_test()
-    return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status)}
+    mclapsrl_status = mclapsrl_client.check_service_status()
+    return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status), "RateLimiter Status": mclapsrl_status}
 
 
 

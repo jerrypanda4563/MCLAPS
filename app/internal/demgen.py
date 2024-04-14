@@ -3,6 +3,7 @@ import json
 from typing import Dict, Literal, Optional, List
 from pydantic import BaseModel
 from app.internal.tokenizer import count_tokens
+from app.internal.mclapsrl import mclapsrlClient
 from app import settings
 
 import time
@@ -13,6 +14,7 @@ from threading import Lock
 
 
 openai.api_key = settings.OPEN_AI_KEY
+rate_limiter = mclapsrlClient()
 
 
 
@@ -190,6 +192,8 @@ def generate_demographic(demo: Dict, response_model: Optional[str] = "gpt-3.5-tu
     system_prompt = json.dumps({k: v for k, v in prompt_data.items() if v is not None})
     prompt = "General demographic group:\n" + system_prompt + "\nJSON Response schema:\n"+schema
 
+    while rate_limiter.model_status(response_model) == False:
+        time.sleep(2)
     response = openai.ChatCompletion.create(
         model=response_model,
         response_format={"type": "json_object"},
@@ -205,7 +209,7 @@ def generate_demographic(demo: Dict, response_model: Optional[str] = "gpt-3.5-tu
         frequency_penalty=0,
         presence_penalty=0
     )
-
+    rate_limiter.new_response(response)
     demographic_profile = response.choices[0].message.content
     return demographic_profile
             

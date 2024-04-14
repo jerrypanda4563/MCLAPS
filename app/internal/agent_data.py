@@ -1,6 +1,7 @@
 from app.internal import chunking
 from app.internal.tokenizer import count_tokens
 from app import settings
+import time
 
 
 from sklearn.metrics.pairwise import cosine_similarity as cs
@@ -13,12 +14,12 @@ import uuid
 import random
 import spacy
 from concurrent.futures import as_completed, ProcessPoolExecutor, ThreadPoolExecutor
-from matplotlib import pyplot as plt
 import math
-import time
+from app.internal.mclapsrl import mclapsrlClient
 
 
 nlp = spacy.load("en_core_web_sm")
+rate_limiter = mclapsrlClient()
 
 openai.api_key = settings.OPEN_AI_KEY
 
@@ -79,12 +80,16 @@ class AgentData:
         self.L2_diagnolized: np.ndarray = np.array([[]]) 
 
     #add limiter
-    def embed_large_text(self, text: str) -> np.ndarray:
+    def embed_large_text(self, text: str, embedding_model: Optional[str] = "text-embedding-3-small") -> np.ndarray:
+        while rate_limiter.model_status(embedding_model) == False:
+            time.sleep(2)
+            
         response=Embedding.create(
-            model="text-embedding-3-small",
+            model = embedding_model,
             input=str(text)
             )
         embedding = np.array(response['data'][0]['embedding'])
+        rate_limiter.new_response(response)
         return embedding
                 
     def embed_text(self, text: str) -> np.ndarray:
