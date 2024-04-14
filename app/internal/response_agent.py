@@ -104,7 +104,7 @@ class Agent:
         if self.json_mode == True:
             while rate_limiter.model_status(self.llm_model) == False:
                 time.sleep(2)
-            completion=openai.ChatCompletion.create(
+            completion = openai.ChatCompletion.create(
                     model = self.llm_model,
                     response_format={"type": "json_object"},
                     messages=[
@@ -115,7 +115,7 @@ class Agent:
                     max_tokens=512,
                     n=1  
                     )
-            rate_limiter.new_response(completion)
+            rate_limiter.new_response(completion.dict())
             response=completion.choices[0].message.content
             return response
 
@@ -132,7 +132,7 @@ class Agent:
                     max_tokens=512,
                     n=1  
                     )
-            rate_limiter.new_response(completion)
+            rate_limiter.new_response(completion.dict())
             response=completion.choices[0].message.content
             return response
     
