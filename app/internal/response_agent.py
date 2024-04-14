@@ -115,7 +115,8 @@ class Agent:
                     max_tokens=512,
                     n=1  
                     )
-            rate_limiter.new_response(completion.dict())
+            # rate_limiter.new_response(completion)
+            print(type(completion))
             response=completion.choices[0].message.content
             return response
 
@@ -132,7 +133,8 @@ class Agent:
                     max_tokens=512,
                     n=1  
                     )
-            rate_limiter.new_response(completion.dict())
+            # rate_limiter.new_response(completion)
+            print(type(completion))
             response=completion.choices[0].message.content
             return response
     
