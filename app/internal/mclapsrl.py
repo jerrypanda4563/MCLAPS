@@ -26,7 +26,7 @@ def model_filter(model: str) -> open_ai_models:
     else:
         return model
 
-def parse_response(response) -> Response:
+def parse_response(response) -> dict:
     try:
         model = model_filter(response.model)
     except AttributeError:
@@ -55,10 +55,9 @@ def parse_response(response) -> Response:
         "total_tokens": total_tokens
     }
 
-    data_model = Response(**parsed_json)
 
 
-    return data_model
+    return parsed_json
 
 
 class mclapsrlClient:
