@@ -35,7 +35,6 @@ def parse_response(response) -> dict:
         "total_tokens": total_tokens
     }
 
-    json_data = json.dumps(parsed_json)
 
     return parsed_json
 
@@ -87,7 +86,7 @@ class mclapsrlClient:
         while attempts > 0:
             try:
                 # response = requests.post(f"{self.base_url}/new_response", json={'response_body': response_body})
-                response = requests.post(f"{self.base_url}/new_response", json = response_body)
+                response = requests.post(f"{self.base_url}/new_response", json = response_body, headers = {'Content-Type': 'application/json'})
                 print(f"{response.status_code}, {response.reason}")
                 if response.json() == True:
                     return True
