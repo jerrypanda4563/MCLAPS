@@ -76,6 +76,8 @@ class mclapsrlClient:
     #if new response logged, returns true, if logging failed or client is down, returns false
     def new_response(self, response) -> bool:
         
+
+        #openai generator object parsed to dictionary
         response_body = parse_response(response)
 
         attempts = 10
@@ -89,9 +91,12 @@ class mclapsrlClient:
                 else:
                     print(f"Response logging failed, retrying  ({attempts} attempts remaining).")
                     attempts -= 1
-            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
                 print(f"Error in mclapsrl connection: {e}, retrying  ({attempts} attempts remaining).")
                 attempts -= 1
+            except requests.exceptions.RequestException as e:
+                print(f"Request exception: {e}")
+                break #breaks loop if request exception occurs
 
         return False
 
@@ -102,7 +107,7 @@ class mclapsrlClient:
             try:
                 response = requests.get(f"{self.base_url}/model_status", params={'model': model})
                 return response.json()
-            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
                 print(f"Error in mclapsrl connection: {e}, retrying ({attempts} attempts remaining).")
                 attempts -= 1
         

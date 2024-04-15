@@ -16,6 +16,11 @@ import json
 import uuid
 
 
+#temporary import 
+import openai
+import settings
+
+openai.api_key = settings.OPEN_AI_KEY
 
 application = FastAPI()
 
@@ -33,11 +38,24 @@ async def test_services():
     mclapsrl_status = mclapsrl_client.check_service_status()
     return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status), "RateLimiter Status": mclapsrl_status}
 
-# @application.post("/mclapsrl/new_response")
-# async def new_response(response_body: dict):
-#     mclapsrl_client = mclapsrl.mclapsrlClient()
-#     response = mclapsrl_client.new_response(response_body)
-#     return {"Response": response}
+
+#temporary endpoint
+@application.get("/mclapsrl/test")
+async def response_test():
+    mclapsrl_client = mclapsrl.mclapsrlClient()
+    completion = openai.ChatCompletion.create(
+                    model = "gpt-3.5-turbo",
+                    messages=[
+                            {"role": "system", "content": "helpful assistant"},
+                            {"role": "user", "content": "who won the world series in 1995"},
+                        ],
+                    temperature=0.7,
+                    max_tokens=512,
+                    n=1  
+                    )
+
+    loggin_result = mclapsrl_client.new_response(completion)
+    return {"Response": loggin_result}
 
 @application.post("/simulations/new_simulation")
 async def new_simulation(sim_param: SimulationParameters,
