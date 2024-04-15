@@ -42,6 +42,7 @@ def parse_response(response) -> dict:
 class mclapsrlClient:
     def __init__(self):
         self.base_url = settings.MCLAPSRL_API
+        self.headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
 
     def check_service_status(self) -> dict:
         """Check the root status of the API."""
@@ -64,7 +65,7 @@ class mclapsrlClient:
         attempts = 10
         while attempts > 0:
             try:
-                response = (requests.post(f"{self.base_url}/create_counter", json={'model': model})).json()  # returns true false for whether counter created
+                response = (requests.post(f"{self.base_url}/create_counter", headers = self.headers, data = model)).json()  # returns true false for whether counter created
                 if response == True:
                     return True
                 else:
@@ -86,7 +87,7 @@ class mclapsrlClient:
         while attempts > 0:
             try:
                 # response = requests.post(f"{self.base_url}/new_response", json={'response_body': response_body})
-                response = requests.post(f"{self.base_url}/new_response", json = response_body, headers = {'Content-Type': 'application/json'})
+                response = requests.post(f"{self.base_url}/new_response", headers = self.headers, data = response_body)
                 print(f"{response.status_code}, {response.reason}")
                 if response.json() == True:
                     return True
