@@ -10,18 +10,22 @@ def parse_response(response) -> dict:
     try:
         model = response.model
     except AttributeError:
+        print("Model not found in response.")
         model = None
     try:
         input_tokens = response.usage.prompt_tokens
     except AttributeError:
+        print("Prompt tokens not found in response.")
         input_tokens = 0
     try:
         output_tokens = response.usage.completion_tokens
     except AttributeError:
+        print("Completion tokens not found in response.")
         output_tokens = 0
     try:    
         total_tokens = response.usage.total_tokens
     except AttributeError:
+        print("Total tokens not found in response.")
         total_tokens = 0
 
     parsed_json = {
@@ -84,7 +88,7 @@ class mclapsrlClient:
             try:
                 # response = requests.post(f"{self.base_url}/new_response", json={'response_body': response_body})
                 response = requests.post(f"{self.base_url}/new_response", json = response_body)
-
+                print(f"{response.status_code}, {response.reason}")
                 if response.json() == True:
                     return True
                 else:
