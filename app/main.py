@@ -19,6 +19,7 @@ import uuid
 #temporary import 
 import openai
 import app.settings as settings
+from app.data_models import open_ai_models
 
 openai.api_key = settings.OPEN_AI_KEY
 
@@ -58,6 +59,12 @@ async def response_test():
     except Exception as e:
         raise HTTPException(status_code=400, detail=f'Failed to log response: {e}.')
     return {"Response": loggin_result}
+
+@application.get("/mclapsrl/model_status")
+async def model_status_test(model: open_ai_models):
+    mclapsrl_client = mclapsrl.mclapsrlClient()
+    model_status = mclapsrl_client.get_counter_status(model)
+    return model_status
 
 @application.post("/simulations/new_simulation")
 async def new_simulation(sim_param: SimulationParameters,
