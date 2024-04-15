@@ -85,7 +85,7 @@ class mclapsrlClient:
         attempts = 10
         while attempts > 0:
             try:
-                response = (requests.post(f"{self.base_url}/create_counter", headers = self.headers, json = model)).json()  # returns true false for whether counter created
+                response = (requests.post(f"{self.base_url}/create_counter", headers = self.headers, json = {"model":model})).json()  # returns true false for whether counter created
                 if response == True:
                     return True
                 else:
@@ -97,18 +97,16 @@ class mclapsrlClient:
             
         return False
     
+
     #if new response logged, returns true, if logging failed or client is down, returns false
     def new_response(self, response) -> bool:
-
         #openai generator object parsed to dictionary
         response_body = parse_response(response)
 
         attempts = 10
         while attempts > 0:
             try:
-                # response = requests.post(f"{self.base_url}/new_response", json={'response_body': response_body})
                 response = requests.post(f"{self.base_url}/new_response", headers = self.headers, json = response_body)
-                print(f"{response.status_code}, {response.reason}")
                 if response.json() == True:
                     return True
                 else:
@@ -122,6 +120,7 @@ class mclapsrlClient:
                 break #breaks loop if request exception occurs
 
         return False
+
 
     #returns boolean status of model, or false if client is down, so if client is down the simulation halts indefinitely
     def model_status(self, model: open_ai_models) -> bool:      
