@@ -66,6 +66,15 @@ async def model_status_test(model: open_ai_models):
     model_status = mclapsrl_client.get_counter_status(model)
     return model_status
 
+@application.get("/mclapsrl/create_counter")
+async def create_counter_test(model: open_ai_models):
+    try:
+        mclapsrl_client = mclapsrl.mclapsrlClient()
+        counter_status = mclapsrl_client.create_counter(model)
+        return {"Counter Status": counter_status}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f'Failed to create counter: {e}.')
+
 @application.post("/simulations/new_simulation")
 async def new_simulation(sim_param: SimulationParameters,
                                 background_tasks: BackgroundTasks):
