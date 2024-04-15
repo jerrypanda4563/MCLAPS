@@ -18,7 +18,7 @@ import uuid
 
 #temporary import 
 import openai
-import settings
+import app.settings as settings
 
 openai.api_key = settings.OPEN_AI_KEY
 
