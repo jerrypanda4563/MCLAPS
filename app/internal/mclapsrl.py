@@ -1,11 +1,16 @@
 import requests
 from app import settings
-import json
+from pydantic import BaseModel
 from app.data_models import open_ai_models
 
 
+class Response(BaseModel):  
+    model: open_ai_models
+    input_tokens: int
+    output_tokens: int
+    total_tokens: int
 
-def parse_response(response) -> dict:
+def parse_response(response) -> Response:
 
     try:
         model = response.model
@@ -35,8 +40,10 @@ def parse_response(response) -> dict:
         "total_tokens": total_tokens
     }
 
+    data_model = Response(**parsed_json)
 
-    return parsed_json
+
+    return data_model
 
 
 class mclapsrlClient:
