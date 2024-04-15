@@ -55,7 +55,6 @@ class mclapsrlClient:
         return mclapsrl_status
 
     def get_counter_status(self, model: open_ai_models):
-        """Retrieve the status of the counter for a specified model."""
         response = requests.get(f"{self.base_url}/counter_status", params={'model': model})
         return response.json()
 
@@ -65,7 +64,7 @@ class mclapsrlClient:
         attempts = 10
         while attempts > 0:
             try:
-                response = (requests.post(f"{self.base_url}/create_counter", headers = self.headers, data = model)).json()  # returns true false for whether counter created
+                response = (requests.post(f"{self.base_url}/create_counter", headers = self.headers, json = model)).json()  # returns true false for whether counter created
                 if response == True:
                     return True
                 else:
@@ -87,7 +86,7 @@ class mclapsrlClient:
         while attempts > 0:
             try:
                 # response = requests.post(f"{self.base_url}/new_response", json={'response_body': response_body})
-                response = requests.post(f"{self.base_url}/new_response", headers = self.headers, data = response_body)
+                response = requests.post(f"{self.base_url}/new_response", headers = self.headers, json = response_body)
                 print(f"{response.status_code}, {response.reason}")
                 if response.json() == True:
                     return True
