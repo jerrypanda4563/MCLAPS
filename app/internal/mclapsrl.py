@@ -5,7 +5,7 @@ from app.data_models import open_ai_models
 
 
 
-def parse_response(response) -> str:
+def parse_response(response) -> dict:
 
     try:
         model = response.model
@@ -33,7 +33,7 @@ def parse_response(response) -> str:
 
     json_data = json.dumps(parsed_json)
 
-    return json_data
+    return parsed_json
 
 
 class mclapsrlClient:
@@ -83,7 +83,7 @@ class mclapsrlClient:
         while attempts > 0:
             try:
                 # response = requests.post(f"{self.base_url}/new_response", json={'response_body': response_body})
-                response = requests.post(f"{self.base_url}/new_response", params = {"response_body": response_body})
+                response = requests.post(f"{self.base_url}/new_response", json = response_body)
 
                 if response.json() == True:
                     return True
