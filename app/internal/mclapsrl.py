@@ -10,10 +10,25 @@ class Response(BaseModel):
     output_tokens: int
     total_tokens: int
 
-def parse_response(response) -> Response:
+def model_filter(model: str) -> open_ai_models:
+    if "gpt-3.5-turbo" in model:
+        return "gpt-3.5-turbo"
+    if "gpt-4-turbo" in model:
+        return "gpt-4-turbo"
+    if "gpt-4-0125-preview" in model:
+        return "gpt-4-turbo"
+    if "gpt-4-1106-preview" in model:
+        return "gpt-4-turbo"
+    if "text-embedding-3-small" in model:
+        return "text-embedding-3-small"
+    if "text-embedding-3-large" in model:
+        return "text-embedding-3-large"
+    else:
+        return model
 
+def parse_response(response) -> Response:
     try:
-        model = response.model
+        model = model_filter(response.model)
     except AttributeError:
         print("Model not found in response.")
         model = None

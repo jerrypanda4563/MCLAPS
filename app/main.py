@@ -45,7 +45,7 @@ async def test_services():
 async def response_test():
     mclapsrl_client = mclapsrl.mclapsrlClient()
     completion = openai.ChatCompletion.create(
-                    model = "gpt-3.5-turbo",
+                    model = "gpt-4-turbo",
                     messages=[
                             {"role": "system", "content": "helpful assistant"},
                             {"role": "user", "content": "who won the world series in 1995"},
