@@ -54,6 +54,7 @@ async def response_test():
                     max_tokens=512,
                     n=1  
                     )
+    print(completion.model)
     try:
         loggin_result = mclapsrl_client.new_response(completion)
     except Exception as e:
