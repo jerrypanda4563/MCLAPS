@@ -83,7 +83,7 @@ class mclapsrlClient:
         while attempts > 0:
             try:
                 # response = requests.post(f"{self.base_url}/new_response", json={'response_body': response_body})
-                response = requests.post(f"{self.base_url}/new_response", json = response_body)
+                response = requests.post(f"{self.base_url}/new_response", params = {"response_body": response_body})
 
                 if response.json() == True:
                     return True
