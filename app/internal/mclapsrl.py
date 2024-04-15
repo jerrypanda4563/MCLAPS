@@ -1,10 +1,11 @@
 import requests
 from app import settings
+import json
 from app.data_models import open_ai_models
 
 
 
-def parse_response(response) -> dict:
+def parse_response(response) -> str:
 
     try:
         model = response.model
@@ -30,7 +31,9 @@ def parse_response(response) -> dict:
         "total_tokens": total_tokens
     }
 
-    return parsed_json
+    json_data = json.dumps(parsed_json)
+
+    return json_data
 
 
 class mclapsrlClient:
