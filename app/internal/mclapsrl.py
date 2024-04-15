@@ -53,9 +53,6 @@ class mclapsrlClient:
         return response.json()
 
 
-
-
-
     #if counter created, returns true, if counter creation failed or client is down, returns false
     def create_counter(self, model: open_ai_models) -> bool:
         attempts = 10
@@ -75,7 +72,6 @@ class mclapsrlClient:
     
     #if new response logged, returns true, if logging failed or client is down, returns false
     def new_response(self, response) -> bool:
-        
 
         #openai generator object parsed to dictionary
         response_body = parse_response(response)
@@ -84,7 +80,7 @@ class mclapsrlClient:
         while attempts > 0:
             try:
                 # response = requests.post(f"{self.base_url}/new_response", json={'response_body': response_body})
-                response = requests.post(f"{self.base_url}/new_response", json=response_body)
+                response = requests.post(f"{self.base_url}/new_response", data=response_body)
 
                 if response.json() == True:
                     return True

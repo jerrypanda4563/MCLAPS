@@ -53,8 +53,10 @@ async def response_test():
                     max_tokens=512,
                     n=1  
                     )
-
-    loggin_result = mclapsrl_client.new_response(completion)
+    try:
+        loggin_result = mclapsrl_client.new_response(completion)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f'Failed to log response: {e}.')
     return {"Response": loggin_result}
 
 @application.post("/simulations/new_simulation")
