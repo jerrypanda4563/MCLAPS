@@ -7,6 +7,7 @@ import app.mongo_config as mongo_db
 from app.internal import simulation
 
 from app.internal.demgen import Demographic_Generator
+from app.internal.mclapsrl import mclapsrlClient
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
@@ -17,6 +18,11 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 def run_simulation(survey: Dict, demographic_parameters: Dict, agent_model: str, agent_temperature: float, n_of_runs: int, sim_id: str, n_workers: Optional[int]=5) -> bool:
     
     database = mongo_db.collection_simulations
+
+    # #manual counter creation in runner process for initial demgen thread
+    # rate_limiter = mclapsrlClient()
+    # rate_limiter.create_counter(agent_model)
+
     demographic_generator=Demographic_Generator(demo=demographic_parameters, n_of_results=n_of_runs)
     demographic_profiles=demographic_generator.generate_demographic_dataset()
     print("demographic profiles generated")

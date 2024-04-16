@@ -2,6 +2,7 @@ from app.internal import runner
 from app.internal import data_services
 import app.mongo_config as mongo_db
 from app.data_models import SimulationParameters
+import app.internal.mclapsrl as mclapsrl
 
 from tests import test
 from typing import Dict, List
@@ -16,6 +17,7 @@ import uuid
 
 
 
+
 application = FastAPI()
 
 @application.get("/")
@@ -25,11 +27,13 @@ async def root():
 
 @application.get("/connection_test")
 async def test_services():
-    
+    mclapsrl_client = mclapsrl.mclapsrlClient()
     openai_status=test.openai_connection_test()
     mongo_status=test.mongo_connection_test()
     redis_status=test.redis_connection_test()
-    return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status)}
+    mclapsrl_status = mclapsrl_client.check_service_status()
+    return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status), "RateLimiter Status": mclapsrl_status}
+
 
 
 
@@ -103,7 +107,6 @@ async def simulation_status(sim_id: str):
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
         
     
-    
 
 @application.get("/simulations/load_simulation")
 async def load_simulation(sim_id: str) -> Dict:
@@ -143,4 +146,46 @@ async def load_simulation_csv(sim_id: str, file_path = "./simulations"):
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
        
 
+#temporary import 
+# import openai
+# import app.settings as settings
+# from app.data_models import open_ai_models
 
+# openai.api_key = settings.OPEN_AI_KEY
+
+
+#temporary endpoint
+# @application.get("/mclapsrl/test")
+# async def response_test():
+#     mclapsrl_client = mclapsrl.mclapsrlClient()
+#     completion = openai.ChatCompletion.create(
+#                     model = "gpt-4-turbo",
+#                     messages=[
+#                             {"role": "system", "content": "helpful assistant"},
+#                             {"role": "user", "content": "who won the world series in 1995"},
+#                         ],
+#                     temperature=0.7,
+#                     max_tokens=512,
+#                     n=1  
+#                     )
+#     print(completion.model)
+#     try:
+#         loggin_result = mclapsrl_client.new_response(completion)
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=f'Failed to log response: {e}.')
+#     return {"Response": loggin_result}
+
+# @application.get("/mclapsrl/model_status")
+# async def model_status_test(model: open_ai_models):
+#     mclapsrl_client = mclapsrl.mclapsrlClient()
+#     model_status = mclapsrl_client.get_counter_status(model)
+#     return model_status
+
+# @application.get("/mclapsrl/create_counter")
+# async def create_counter_test(model: open_ai_models):
+#     try:
+#         mclapsrl_client = mclapsrl.mclapsrlClient()
+#         counter_status = mclapsrl_client.create_counter(model)
+#         return {"Counter Status": counter_status}
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=f'Failed to create counter: {e}.')

@@ -1,9 +1,12 @@
 from app.internal import agent_data
 from app.internal.tokenizer import count_tokens
+from app.internal.mclapsrl import mclapsrlClient, parse_response
 from app import settings
 
-import numpy as np
+import json
 import time
+import numpy as np
+
 import spacy
 from typing import List, Optional
 import openai
@@ -14,12 +17,13 @@ openai.api_key = settings.OPEN_AI_KEY
 
 
 nlp = spacy.load("en_core_web_sm")
+rate_limiter = mclapsrlClient()
 
 
 
 class Agent:
 
-    def __init__(self, instruction:str, model:Optional[str] = "gpt-3.5-turbo-0125", temperature: Optional[float] = 1.21, json_mode:Optional[bool] = True):
+    def __init__(self, instruction:str, model:Optional[str] = "gpt-3.5-turbo", temperature: Optional[float] = 1.21, json_mode:Optional[bool] = True):
         self.lt_memory = agent_data.AgentData()
         self.st_memory: List[str] = []
         self.st_memory_capacity: int = 2000
@@ -30,13 +34,15 @@ class Agent:
     
 
     #add limiter
-    def embed(self, string:str) -> np.ndarray:
-       
+    def embed(self, string:str, embedding_model: Optional[str] = "text_embedding-3-small") -> np.ndarray:
+        while rate_limiter.model_status(embedding_model) == False:
+            time.sleep(2)
         response=openai.Embedding.create(
-            model="text-embedding-3-small",
+            model = embedding_model,
             input=str(string)
             )
 
+        rate_limiter.new_response(response)
         embedding = np.array(response['data'][0]['embedding'])
         return embedding
 
@@ -98,8 +104,9 @@ class Agent:
         memory_prompt = "You recall the following information:\n" + '\n'.join(self.st_memory)
 
         if self.json_mode == True:
-
-            completion=openai.ChatCompletion.create(
+            while rate_limiter.model_status(self.llm_model) == False:
+                time.sleep(2)
+            completion = openai.ChatCompletion.create(
                     model = self.llm_model,
                     response_format={"type": "json_object"},
                     messages=[
@@ -110,12 +117,14 @@ class Agent:
                     max_tokens=512,
                     n=1  
                     )
-
-            response=completion.choices[0].message.content
+ 
+            rate_limiter.new_response(completion)
+            response = completion.choices[0].message.content
             return response
 
         else:
-
+            while rate_limiter.model_status(self.llm_model) == False:
+                time.sleep(2)
             completion=openai.ChatCompletion.create(
                     model = self.llm_model,
                     messages=[
@@ -126,6 +135,7 @@ class Agent:
                     max_tokens=512,
                     n=1  
                     )
+            rate_limiter.new_response(completion)
             response=completion.choices[0].message.content
             return response
     

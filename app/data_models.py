@@ -1,5 +1,9 @@
 from pydantic import BaseModel, Field, validator
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Literal
+
+
+
+open_ai_models = Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview", "text-embedding-3-small", "text-embedding-3-large" ]
 
 class DemographicModel(BaseModel):
     sex_at_birth: Optional[str] = None
@@ -100,12 +104,10 @@ class SurveyModel(BaseModel):
 
 
 class AgentParameters(BaseModel):
-    agent_model: Optional[str] = "gpt-3.5-turbo-0125"
+    agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview" ]] = "gpt-3.5-turbo"
     agent_temperature: Optional[float] = 1.21
     class Config:
         extra="forbid"
-
-    
 
 
 class SimulationParameters(BaseModel):
