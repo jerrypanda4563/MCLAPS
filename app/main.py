@@ -107,7 +107,6 @@ async def simulation_status(sim_id: str):
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
         
     
-    
 
 @application.get("/simulations/load_simulation")
 async def load_simulation(sim_id: str) -> Dict:

@@ -4,11 +4,7 @@ from pydantic import BaseModel
 from app.data_models import open_ai_models
 
 
-class Response(BaseModel):  
-    model: open_ai_models
-    input_tokens: int
-    output_tokens: int
-    total_tokens: int
+
 
 def model_filter(model: str) -> open_ai_models:
     if "gpt-3.5-turbo" in model:
@@ -30,33 +26,25 @@ def parse_response(response) -> dict:
     try:
         model = model_filter(response.model)
     except AttributeError:
-        print("Model not found in response.")
         model = None
     try:
         input_tokens = response.usage.prompt_tokens
     except AttributeError:
-        print("Prompt tokens not found in response.")
         input_tokens = 0
     try:
         output_tokens = response.usage.completion_tokens
     except AttributeError:
-        print("Completion tokens not found in response.")
         output_tokens = 0
     try:    
         total_tokens = response.usage.total_tokens
     except AttributeError:
-        print("Total tokens not found in response.")
         total_tokens = 0
-
     parsed_json = {
         "model": model,
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
         "total_tokens": total_tokens
     }
-
-
-
     return parsed_json
 
 
@@ -98,7 +86,7 @@ class mclapsrlClient:
         return False
     
 
-    #if new response logged, returns true, if logging failed or client is down, returns false
+    #if new response logged, returns true, if logging failed or client is down, returns false     
     def new_response(self, response) -> bool:
         #openai generator object parsed to dictionary
         response_body = parse_response(response)
