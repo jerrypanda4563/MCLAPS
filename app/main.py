@@ -2,7 +2,7 @@ from app.internal import runner
 from app.internal import data_services
 import app.mongo_config as mongo_db
 from app.data_models import SimulationParameters
-import app.internal.mclapsrl as mclapsrl
+import app.api_clients.mclapsrl as mclapsrl
 
 from tests import test
 from typing import Dict, List

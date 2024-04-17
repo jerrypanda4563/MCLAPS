@@ -7,7 +7,7 @@ import app.mongo_config as mongo_db
 from app.internal import simulation
 
 from app.internal.demgen import Demographic_Generator
-from app.internal.mclapsrl import mclapsrlClient
+from app.api_clients.mclapsrl import mclapsrlClient
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 

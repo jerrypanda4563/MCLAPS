@@ -1,6 +1,6 @@
 from app.internal import agent_data
 from app.internal.tokenizer import count_tokens
-from app.internal.mclapsrl import mclapsrlClient, parse_response
+from app.api_clients.mclapsrl import mclapsrlClient
 from app import settings
 
 import json
