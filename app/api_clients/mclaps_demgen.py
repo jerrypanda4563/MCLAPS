@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.settings import MCLAPS_DEMGEN_API
 
 
+
 class DemgenRequest(BaseModel):
     number_of_samples: int
     sampling_conditions: DemographicModel
@@ -29,7 +30,7 @@ class MclapsDemgenClient:
             "number_of_samples": request_body.number_of_samples,
             "sampling_conditions": request_body.sampling_conditions.json()
         }
-        response = requests.post(f"{self.base_url}/demgen/request", headers=self.headers, json = json_payload)
+        response = requests.post(f"{self.base_url}/demgen/request", headers=self.headers, json = request_body)
         return response.json()
     
     def get_task_status(self, task_id: str) -> bool:
