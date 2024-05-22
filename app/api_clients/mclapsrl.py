@@ -54,7 +54,6 @@ class mclapsrlClient:
         self.headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
 
     def check_service_status(self) -> dict:
-        """Check the root status of the API."""
         response_root = (requests.get(f"{self.base_url}/")).json()
         response_redis = (requests.get(f"{self.base_url}/redis_connection")).json()
         mclapsrl_status = {
@@ -68,7 +67,7 @@ class mclapsrlClient:
         return response.json()
 
 
-    #if counter created, returns true, if counter creation failed or client is down, returns false
+    #post
     def create_counter(self, model: open_ai_models) -> bool:
         attempts = 10
         while attempts > 0:
@@ -86,7 +85,7 @@ class mclapsrlClient:
         return False
     
 
-    #if new response logged, returns true, if logging failed or client is down, returns false     
+    #post
     def new_response(self, response) -> bool:
         #openai generator object parsed to dictionary
         response_body = parse_response(response)

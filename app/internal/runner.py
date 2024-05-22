@@ -11,8 +11,11 @@ from app.api_clients.mclapsrl import mclapsrlClient
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
+from app.api_clients.mclaps_demgen import MclapsDemgenClient, DemgenRequest
 
 
+
+demgen = MclapsDemgenClient()
 
 
 def run_simulation(survey: Dict, demographic_parameters: Dict, agent_model: str, agent_temperature: float, n_of_runs: int, sim_id: str, n_workers: Optional[int]=5) -> bool:

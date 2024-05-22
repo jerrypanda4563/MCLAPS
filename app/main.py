@@ -15,10 +15,17 @@ import json
 
 import uuid
 
+from app.api_clients.mclaps_demgen import MclapsDemgenClient
+from app.api_clients.mclaps_demgen import DemgenRequest
 
 
 
+
+demgen_client = MclapsDemgenClient()
 application = FastAPI()
+
+
+
 
 @application.get("/")
 async def root():
@@ -32,9 +39,33 @@ async def test_services():
     mongo_status=test.mongo_connection_test()
     redis_status=test.redis_connection_test()
     mclapsrl_status = mclapsrl_client.check_service_status()
-    return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status), "RateLimiter Status": mclapsrl_status}
+    demgen_status = demgen_client.service_status()
+    return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status), "RateLimiter Status": mclapsrl_status, "Demgen Status": demgen_status}
 
 
+##mclaps_demgen testing temp endpoints
+
+
+
+@application.get("/demgen/root")
+async def demgen_read_root():
+    return demgen_client.read_root()
+
+@application.get("demgen/service_status")
+async def demgen_service_status():
+    return demgen_client.service_status()
+
+@application.post("/demgen/demgen_request")
+async def demgen_request(request_body: DemgenRequest):
+    return demgen_client.demgen_request(request_body)
+
+@application.get("/demgen/task_status")
+async def demgen_task_status(task_id: str):
+    return demgen_client.get_task_status(task_id)
+
+@application.get("/demgen/task_results")
+async def demgen_task_results(task_id: str):
+    return demgen_client.get_task_results(task_id)
 
 
 @application.post("/simulations/new_simulation")
