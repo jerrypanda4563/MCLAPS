@@ -33,7 +33,7 @@ class MclapsDemgenClient:
         retries = 10
         while retries > 0:
             try:
-                response = requests.get(f"{self.base_url}/demgen/status, params={'task_id': {task_id}}")
+                response = requests.get(f"{self.base_url}/demgen/status", params = {'task_id': task_id})
                 if response["task_status"] == "finished":
                     return True
                 else:
@@ -44,15 +44,14 @@ class MclapsDemgenClient:
                     return None
                 if e == 500:
                     retries -= 1
-                    print(f"Internal server error. Retries remaining: {retries}")
-                    
+                    print(f"Internal server error. Retries remaining: {retries}")   
         return None
     
     def get_task_results(self, task_id: str) -> list[dict]:
         retries = 10
         while retries > 0:
             try:
-                response = requests.get(f"{self.base_url}/demgen/result,  params={'task_id': {task_id}}")
+                response = requests.get(f"{self.base_url}/demgen/result", params = {'task_id': task_id})
                 return response.json()
             
             except requests.exceptions.HTTPError as e:
