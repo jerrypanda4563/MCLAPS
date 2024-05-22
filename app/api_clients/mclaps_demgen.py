@@ -25,14 +25,14 @@ class MclapsDemgenClient:
         return response.json()
     
     def demgen_request(self, request_body: DemgenRequest) -> dict:
-        response = requests.post(f"{self.base_url}/demgen_request", headers=self.headers, json = request_body.json())
+        response = requests.post(f"{self.base_url}/demgen/request", headers=self.headers, json = request_body.json())
         return response.json()
     
     def get_task_status(self, task_id: str) -> bool:
         retries = 10
         while retries > 0:
             try:
-                response = requests.get(f"{self.base_url}/task_status/{task_id}").json()
+                response = requests.get(f"{self.base_url}/demgen/status/{task_id}").json()
                 if response["task_status"] == "finished":
                     return True
                 else:
@@ -51,7 +51,7 @@ class MclapsDemgenClient:
         retries = 10
         while retries > 0:
             try:
-                response = requests.get(f"{self.base_url}/task_results/{task_id}")
+                response = requests.get(f"{self.base_url}/demgen/result/{task_id}")
                 return response.json()
             
             except requests.exceptions.HTTPError as e:
