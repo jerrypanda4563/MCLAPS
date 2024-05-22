@@ -25,7 +25,7 @@ class MclapsDemgenClient:
         return response.json()
     
     def demgen_request(self, request_body: DemgenRequest) -> dict:
-        response = requests.post(f"{self.base_url}/demgen_request", headers=self.headers, json = DemgenRequest.json())
+        response = requests.post(f"{self.base_url}/demgen_request", headers=self.headers, json = request_body.json())
         return response.json()
     
     def get_task_status(self, task_id: str) -> bool:
