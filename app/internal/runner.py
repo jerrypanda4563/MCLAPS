@@ -12,23 +12,48 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
 from app.api_clients.mclaps_demgen import MclapsDemgenClient, DemgenRequest
+from app.data_models import DemographicModel
 
+import time
 
 
 demgen = MclapsDemgenClient()
 
 
-def run_simulation(survey: Dict, demographic_parameters: Dict, agent_model: str, agent_temperature: float, n_of_runs: int, sim_id: str, n_workers: Optional[int]=5) -> bool:
+def run_simulation(survey: Dict, demographic_parameters: DemographicModel, agent_model: str, agent_temperature: float, n_of_runs: int, sim_id: str, n_workers: Optional[int]=5) -> bool:
     
     database = mongo_db.collection_simulations
+
 
     # #manual counter creation in runner process for initial demgen thread
     # rate_limiter = mclapsrlClient()
     # rate_limiter.create_counter(agent_model)
 
-    demographic_generator=Demographic_Generator(demo=demographic_parameters, n_of_results=n_of_runs)
-    demographic_profiles=demographic_generator.generate_demographic_dataset()
-    print("demographic profiles generated")
+    # demographic_generator=Demographic_Generator(demo=demographic_parameters, n_of_results=n_of_runs)
+    # demographic_profiles=demographic_generator.generate_demographic_dataset()
+    # print("demographic profiles generated")
+    
+    demographic_profiles = None
+    try:
+        demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sampling_conditions=demographic_parameters))
+    except Exception as e:
+        print(f"Demgen request failed: {e}")
+        traceback.print_exc()
+        return False
+    
+    task_id = demgen_task["task_id"]
+
+    while demographic_profiles is None:
+        task_status = demgen.get_task_status(task_id)
+        if task_status == True:
+            demographic_profiles = demgen.get_task_results(task_id)
+            print("Demographic profiles received.")
+        elif task_status == False:
+            time.sleep(5)
+        else:
+            print("Demgen task failed.")
+            return False
+
     simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_model=agent_model, agent_temperature=agent_temperature) for demo in demographic_profiles]
     print("simulation instances created")
     n_of_completed_runs = 0

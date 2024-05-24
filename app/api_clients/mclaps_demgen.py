@@ -35,11 +35,10 @@ class MclapsDemgenClient:
         while retries > 0:
             try:
                 response = requests.get(f"{self.base_url}/demgen/status", params = {"task_id": task_id}, headers = self.headers).json()
-                # if response["task_status"] == "finished": 
-                #     return True
-                # else:
-                #     return False
-                return response
+                if response["task_status"] == "finished": 
+                    return True
+                else:
+                    return False
             except requests.exceptions.HTTPError as e:
                 if e == 404:
                     print(f"Task {task_id} not found.")
@@ -54,6 +53,9 @@ class MclapsDemgenClient:
         while retries > 0:
             try:
                 response = requests.get(f"{self.base_url}/demgen/result", params = {"task_id": task_id}, headers=self.headers).json()
+                if response == "null":
+                    return []
+                
                 return response
             
             except requests.exceptions.HTTPError as e:

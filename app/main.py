@@ -16,7 +16,7 @@ import json
 import uuid
 
 from app.api_clients.mclaps_demgen import MclapsDemgenClient
-from app.api_clients.mclaps_demgen import DemgenRequest
+
 
 
 
@@ -34,38 +34,24 @@ async def root():
 
 @application.get("/connection_test")
 async def test_services():
-    mclapsrl_client = mclapsrl.mclapsrlClient()
+
     openai_status=test.openai_connection_test()
     mongo_status=test.mongo_connection_test()
     redis_status=test.redis_connection_test()
+    mclapsrl_client = mclapsrl.mclapsrlClient()
     mclapsrl_status = mclapsrl_client.check_service_status()
+    demgen_client = MclapsDemgenClient()
     demgen_status = demgen_client.service_status()
-    return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status), "RateLimiter Status": mclapsrl_status, "Demgen Status": demgen_status}
+
+    return {
+        "OpenAI Status": openai_status, 
+        "Mongo Status": mongo_status,
+        "Redis Status": redis_status, 
+        "RateLimiter Status": mclapsrl_status, 
+        "Demgen Status": demgen_status
+        }
 
 
-##mclaps_demgen testing temp endpoints
-
-
-
-@application.get("/demgen/root")
-async def demgen_read_root():
-    return demgen_client.read_root()
-
-@application.get("demgen/service_status")
-async def demgen_service_status():
-    return demgen_client.service_status()
-
-@application.post("/demgen/demgen_request")
-async def demgen_request(request_body: DemgenRequest):
-    return demgen_client.demgen_request(request_body)
-
-@application.get("/demgen/task_status")
-async def demgen_task_status(task_id: str):
-    return demgen_client.get_task_status(task_id)
-
-@application.get("/demgen/task_results")
-async def demgen_task_results(task_id: str):
-    return demgen_client.get_task_results(task_id)
 
 
 @application.post("/simulations/new_simulation")
@@ -103,7 +89,6 @@ async def new_simulation(sim_param: SimulationParameters,
             "questions": [json.loads(question.json()) for question in survey_params.questions]
         }
 
-        demo_object = json.loads(demographic_params.json())
 
         agent_model = sim_param.agent_params.agent_model
         agent_temperature = sim_param.agent_params.agent_temperature
@@ -111,7 +96,7 @@ async def new_simulation(sim_param: SimulationParameters,
 
 
         try:
-            background_tasks.add_task(runner.run_simulation, survey_object, demo_object, agent_model, agent_temperature, n_of_runs, sim_id, n_of_workers)
+            background_tasks.add_task(runner.run_simulation, survey_object, demographic_params, agent_model, agent_temperature, n_of_runs, sim_id, n_of_workers)
         except Exception as e:
             raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
 
