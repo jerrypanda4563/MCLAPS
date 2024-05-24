@@ -1,4 +1,3 @@
-import httpx
 import requests
 import json
 from app.data_models import DemographicModel
@@ -10,6 +9,8 @@ from app.settings import MCLAPS_DEMGEN_API
 class DemgenRequest(BaseModel):
     number_of_samples: int
     sampling_conditions: DemographicModel
+
+
 
 
 class MclapsDemgenClient:
@@ -29,15 +30,16 @@ class MclapsDemgenClient:
         response = requests.post(f"{self.base_url}/demgen/request", headers=self.headers, json = request_body.dict())
         return response.json()
     
-    def get_task_status(self, task_id: str) -> bool:
+    def get_task_status(self, task_id: str) -> dict:
         retries = 10
         while retries > 0:
             try:
-                response = requests.get(f"{self.base_url}/demgen/status", params = {'task_id': task_id}).json()
-                if response["task_status"] == "finished":
-                    return True
-                else:
-                    return False
+                response = requests.get(f"{self.base_url}/demgen/status", params = {"task_id": task_id}, headers = self.headers).json()
+                # if response["task_status"] == "finished": 
+                #     return True
+                # else:
+                #     return False
+                return response
             except requests.exceptions.HTTPError as e:
                 if e == 404:
                     print(f"Task {task_id} not found.")
@@ -51,7 +53,7 @@ class MclapsDemgenClient:
         retries = 10
         while retries > 0:
             try:
-                response = requests.get(f"{self.base_url}/demgen/result", params = {'task_id': task_id})
+                response = requests.get(f"{self.base_url}/demgen/result", params = {"task_id": task_id}, headers=self.headers)
                 return response.json()
             
             except requests.exceptions.HTTPError as e:
