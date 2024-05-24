@@ -34,7 +34,7 @@ class MclapsDemgenClient:
         retries = 10
         while retries > 0:
             try:
-                response = requests.get(f"{self.base_url}/demgen/status", json = {"task_id": task_id}, headers = self.headers).json()
+                response = requests.get(f"{self.base_url}/demgen/status", params = {"task_id": task_id}, headers = self.headers).json()
                 # if response["task_status"] == "finished": 
                 #     return True
                 # else:
@@ -53,8 +53,8 @@ class MclapsDemgenClient:
         retries = 10
         while retries > 0:
             try:
-                response = requests.get(f"{self.base_url}/demgen/result", json = {"task_id": task_id}, headers=self.headers)
-                return response.json()
+                response = requests.get(f"{self.base_url}/demgen/result", params = {"task_id": task_id}, headers=self.headers).json()
+                return response
             
             except requests.exceptions.HTTPError as e:
                 if e == 404:
