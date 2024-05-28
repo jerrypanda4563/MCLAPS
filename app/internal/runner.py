@@ -36,17 +36,19 @@ def run_simulation(sim_id: str, survey: Dict, demographic_parameters: Demographi
         traceback.print_exc()
         return False
     
-    task_id = demgen_task["task_id"]
-
-    while demographic_profiles is None:
-        task_status = demgen.get_task_status(task_id)
-        if task_status == True:
-            demographic_profiles = demgen.get_task_results(task_id)
+    task_ids = demgen_task["task_ids"] #list of task ids
+    dataset_id = demgen_task["dataset_id"]
+    task_states = False
+    while task_states is False:
+        task_states = demgen.get_task_status(task_ids)
+        if task_states == True:
+            demographic_profiles = demgen.get_task_results(task_ids)
             print("Demographic profiles received.")
-        elif task_status == False:
+        elif task_states == False:
+            print("Demgen in progress.")
             time.sleep(5)
         else:
-            print("Demgen task failed.")
+            print("Demgen task failed, ending simulation.")
             return False
 
     simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]

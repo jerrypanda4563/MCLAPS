@@ -30,29 +30,35 @@ class MclapsDemgenClient:
         response = requests.post(f"{self.base_url}/demgen/request", headers=self.headers, json = request_body.dict())
         return response.json()
     
-    def get_task_status(self, task_id: str) -> dict:
+    def get_task_status(self, task_ids: list[str]) -> bool:
         retries = 10
         while retries > 0:
+
             try:
-                response = requests.get(f"{self.base_url}/demgen/status", params = {"task_id": task_id}, headers = self.headers).json()
-                if response["task_status"] == "finished": 
+                response = requests.get(f"{self.base_url}/demgen/status", params = {"task_ids": task_ids}, headers = self.headers).json()
+                truth_values = [response[task_id] for task_id in task_ids]
+                if all(truth_value == "finished" for truth_value in truth_values):
                     return True
-                else:
+                elif all(truth_value == "started" for truth_value in truth_values):
                     return False
+                else:
+                    return None
+
             except requests.exceptions.HTTPError as e:
                 if e == 404:
-                    print(f"Task {task_id} not found.")
+                    print(f"Task {task_ids} not found.")
                     return None
                 if e == 500:
                     retries -= 1
                     print(f"Internal server error. Retries remaining: {retries}")   
+
         return None
     
-    def get_task_results(self, task_id: str) -> list[dict]:
+    def get_task_results(self, task_ids: list[str]) -> list[dict]:
         retries = 10
         while retries > 0:
             try:
-                response = requests.get(f"{self.base_url}/demgen/result", params = {"task_id": task_id}, headers=self.headers).json()
+                response = requests.get(f"{self.base_url}/demgen/result", params = {"task_ids": task_ids}, headers=self.headers).json()
                 if response == "null":
                     return []
                 
