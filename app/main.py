@@ -58,6 +58,8 @@ async def test_services():
 async def new_simulation(sim_param: SimulationParameters,
                                 background_tasks: BackgroundTasks):
     
+    #unwraps simulation parameters
+
     if test.mongo_connection_test():
         print("MongoDB connection successful.")
 
@@ -66,6 +68,7 @@ async def new_simulation(sim_param: SimulationParameters,
         n_of_workers=sim_param.workers
         survey_params=sim_param.survey_params
         demographic_params=sim_param.demographic_params
+        agent_params=sim_param.agent_params
         
 
         
@@ -90,13 +93,11 @@ async def new_simulation(sim_param: SimulationParameters,
         }
 
 
-        agent_model = sim_param.agent_params.agent_model
-        agent_temperature = sim_param.agent_params.agent_temperature
         
 
 
         try:
-            background_tasks.add_task(runner.run_simulation, survey_object, demographic_params, agent_model, agent_temperature, n_of_runs, sim_id, n_of_workers)
+            background_tasks.add_task(runner.run_simulation, sim_id, survey_object, demographic_params, agent_params, n_of_runs, n_of_workers)
         except Exception as e:
             raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
 
