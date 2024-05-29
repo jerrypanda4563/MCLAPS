@@ -42,6 +42,13 @@ class MclapsDemgenClient:
                     return True
                 elif any(truth_value == "started" for truth_value in truth_values):
                     return False
+                elif any(truth_value == "queued" for truth_value in truth_values):
+                    return False
+                elif any(truth_value == "failed" for truth_value in truth_values):
+                    return None
+                elif any(truth_value == "not_found" for truth_value in truth_values):
+                    return None
+                
                 else:
                     return None
 
