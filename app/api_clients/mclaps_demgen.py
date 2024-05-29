@@ -37,9 +37,10 @@ class MclapsDemgenClient:
             try:
                 response = requests.get(f"{self.base_url}/demgen/status", params = {"task_ids": task_ids}, headers = self.headers).json()
                 truth_values = [response[task_id] for task_id in task_ids]
+                print(truth_values)    ####debug print
                 if all(truth_value == "finished" for truth_value in truth_values):
                     return True
-                elif all(truth_value == "started" for truth_value in truth_values):
+                elif any(truth_value == "started" for truth_value in truth_values):
                     return False
                 else:
                     return None

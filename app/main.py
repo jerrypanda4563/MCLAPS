@@ -93,9 +93,6 @@ async def new_simulation(sim_param: SimulationParameters,
         }
 
 
-        
-
-
         try:
             background_tasks.add_task(runner.run_simulation, sim_id, survey_object, demographic_params, agent_params, n_of_runs, n_of_workers)
         except Exception as e:
