@@ -40,17 +40,12 @@ class MclapsDemgenClient:
                 print(truth_values)    ####debug print
                 if all(truth_value == "finished" for truth_value in truth_values):
                     return True
-                elif any(truth_value == "started" for truth_value in truth_values):
-                    return False
-                elif any(truth_value == "queued" for truth_value in truth_values):
-                    return False
                 elif any(truth_value == "failed" for truth_value in truth_values):
                     return None
                 elif any(truth_value == "not_found" for truth_value in truth_values):
                     return None
-                
                 else:
-                    return None
+                    return False
 
             except requests.exceptions.HTTPError as e:
                 if e == 404:
