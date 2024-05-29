@@ -66,7 +66,7 @@ class MclapsDemgenClient:
             
             except requests.exceptions.HTTPError as e:
                 if e == 404:
-                    print(f"Task {task_id} not found.")
+                    print(f"Task {task_ids} not found.")
                     return None
                 if e == 500:
                     retries -= 1
