@@ -15,4 +15,4 @@ celery
 spacy
 tiktoken
 rq
-supervisord
+supervisor
