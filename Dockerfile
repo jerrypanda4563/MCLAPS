@@ -9,6 +9,11 @@ COPY ./app /code/app
 COPY ./tests /code/tests
 COPY ./simulations /code/simulations
 
+# Install supervisord
+RUN apt-get update && apt-get install -y supervisor
+
+# Copy supervisord configuration file
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 EXPOSE 80
 

@@ -1,6 +1,8 @@
+import rq.registry
 from app.internal import runner
 from app.internal import data_services
 import app.mongo_config as mongo_db
+from app.redis_config import cache 
 from app.data_models import SimulationParameters
 import app.api_clients.mclapsrl as mclapsrl
 
@@ -12,10 +14,14 @@ from fastapi.responses import FileResponse
 import os
 import json
 
+import rq
+
 
 import uuid
 
 from app.api_clients.mclaps_demgen import MclapsDemgenClient
+
+import logging
 
 
 
@@ -23,7 +29,9 @@ from app.api_clients.mclaps_demgen import MclapsDemgenClient
 
 demgen_client = MclapsDemgenClient()
 application = FastAPI()
-
+queue = rq.Queue(name = 'sim_requests', connection = cache)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 
@@ -70,10 +78,41 @@ async def new_simulation(sim_param: SimulationParameters,
         demographic_params=sim_param.demographic_params
         agent_params=sim_param.agent_params
         
+        survey_object: Dict[str, List[Dict]] = {
+            "description": survey_params.description,
+            "questions": [json.loads(question.json()) for question in survey_params.questions]
+        }
 
+        #batching the simulation runs
+        batch_size = 250
+        if n_of_runs > batch_size:
         
+            n_of_batches = n_of_runs // batch_size
+            remainder_batch_size = n_of_runs % batch_size
+            request_batches = [i for i in [batch_size] * n_of_batches + [remainder_batch_size] if i != 0]
+        
+        else:
+            request_batches = [n_of_runs]
+
+        try:
+            tasks = [queue.enqueue(runner.run_simulation, args = (sim_id, survey_object, demographic_params, agent_params, batch_sample_size, n_of_workers), retry = rq.Retry(max=3, interval = 10), results_ttl = 3600) for batch_sample_size in request_batches]
+            
+            queued_jobs = queue.jobs
+            started_registry = rq.registry.StartedJobRegistry(queue=queue)
+            started_job_ids = started_registry.get_job_ids()
+            started_jobs = [queue.fetch_job(job_id) for job_id in started_job_ids]
+            all_jobs = started_jobs + queued_jobs
+            job_ids = [job.id for job in all_jobs]
+            queue_positions = [(job_ids.index(task.id) + 1) for task in tasks]
+            logger.info(f"Tasks {tasks} enqueued, queue position: {queue_positions}.")
+        except Exception as e:
+            raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
+        
+        tasks = {k:v for k,v in zip([task.id for task in tasks], request_batches)}
+
         data_object: Dict = {
             "_id":sim_id,
+            "Queued Tasks": tasks,
             "Survey Name": survey_params.name,
             "Survey Description": survey_params.description,
             "Survey Questions": [json.loads(question.json()) for question in survey_params.questions],
@@ -85,22 +124,51 @@ async def new_simulation(sim_param: SimulationParameters,
         }
         database = mongo_db.collection_simulations
         database.insert_one(data_object)
+        
 
+        # try:
+        #     background_tasks.add_task(runner.run_simulation, sim_id, survey_object, demographic_params, agent_params, n_of_runs, n_of_workers)
+        # except Exception as e:
+        #     raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
 
-        survey_object: Dict[str, List[Dict]] = {
-            "description": survey_params.description,
-            "questions": [json.loads(question.json()) for question in survey_params.questions]
-        }
-
-
-        try:
-            background_tasks.add_task(runner.run_simulation, sim_id, survey_object, demographic_params, agent_params, n_of_runs, n_of_workers)
-        except Exception as e:
-            raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
-
-        return {"_id": sim_id}
+        return {"task_id": [task.id for task in tasks], "simulation_id": sim_id, "queue_position": queue_positions} 
     else:
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
+
+
+
+
+@application.get("/simulations/status")
+async def sim_status(sim_id: str):
+    if test.mongo_connection_test():
+        database = mongo_db.collection_simulations
+        try:
+            simulation_obj: Dict = database.find_one({"_id": sim_id})
+        except Exception as e:
+            raise HTTPException(status_code=404, detail=f"Simulation id {sim_id} doesnt exist {e}")
+
+        queued_tasks: Dict = simulation_obj["Queued Tasks"]
+        task_states = []
+        for task_id in list(queued_tasks.keys()):
+            task = queue.fetch_job(task_id)
+            task_states.append(task.get_status())
+        
+        if all(task == "finished" for task in task_states):
+            database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
+            return {sim_id: f"Completed. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed."}
+        
+        if all(task == "failed" for task in task_states):
+            database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
+            return {sim_id: f"All tasks failed. Completed {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs."}
+        
+
+        return {sim_id: f"Running. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed.", "Task Status": task_states}
+        
+    else:
+        raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
+            
+            
+
 
 
 
@@ -119,6 +187,7 @@ async def simulation_status(sim_id: str):
             raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
     else:
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
+
         
     
 
@@ -160,46 +229,4 @@ async def load_simulation_csv(sim_id: str, file_path = "./simulations"):
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
        
 
-#temporary import 
-# import openai
-# import app.settings as settings
-# from app.data_models import open_ai_models
 
-# openai.api_key = settings.OPEN_AI_KEY
-
-
-#temporary endpoint
-# @application.get("/mclapsrl/test")
-# async def response_test():
-#     mclapsrl_client = mclapsrl.mclapsrlClient()
-#     completion = openai.ChatCompletion.create(
-#                     model = "gpt-4-turbo",
-#                     messages=[
-#                             {"role": "system", "content": "helpful assistant"},
-#                             {"role": "user", "content": "who won the world series in 1995"},
-#                         ],
-#                     temperature=0.7,
-#                     max_tokens=512,
-#                     n=1  
-#                     )
-#     print(completion.model)
-#     try:
-#         loggin_result = mclapsrl_client.new_response(completion)
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=f'Failed to log response: {e}.')
-#     return {"Response": loggin_result}
-
-# @application.get("/mclapsrl/model_status")
-# async def model_status_test(model: open_ai_models):
-#     mclapsrl_client = mclapsrl.mclapsrlClient()
-#     model_status = mclapsrl_client.get_counter_status(model)
-#     return model_status
-
-# @application.get("/mclapsrl/create_counter")
-# async def create_counter_test(model: open_ai_models):
-#     try:
-#         mclapsrl_client = mclapsrl.mclapsrlClient()
-#         counter_status = mclapsrl_client.create_counter(model)
-#         return {"Counter Status": counter_status}
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=f'Failed to create counter: {e}.')

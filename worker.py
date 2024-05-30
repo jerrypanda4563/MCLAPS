@@ -2,7 +2,7 @@ from app.redis_config import cache
 from rq import Worker, Queue, Connection
 import logging
 
-listen = ['default']
+listen = ['sim_requests']
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
