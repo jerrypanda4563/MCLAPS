@@ -1,4 +1,5 @@
 from app.internal import response_agent 
+from app.data_models import SurveyModel, DemographicModel, AgentParameters
 import traceback
 from typing import Dict, List
 
@@ -15,13 +16,19 @@ import time
 
 
 class Simulator():
-
-    def __init__(self,survey: Dict, demographic: Dict, agent_model:str, agent_temperature:float):
+    #unwraps agent parameters and performs initialization of agent 
+    def __init__(self, survey: Dict, demographic: Dict, agent_params: AgentParameters):
         self.survey_responses: List[Dict] = []
         self.survey_context: str = survey["description"]
         self.survey_questions: List[Dict] = survey["questions"]
         self.demographic: Dict = demographic
-        self.simulator = response_agent.Agent(instruction="You are behaving like a real person.", model = agent_model, temperature = agent_temperature, json_mode = True)
+        self.date = agent_params.existance_date
+
+        self.simulator = response_agent.Agent(
+            instruction = f"Imagine you are the following person {demographic}. Behave as this person and respond to all queries under this identity. The current date is {self.date}", 
+            model = agent_params.agent_model, 
+            temperature = agent_params.agent_temperature, 
+            json_mode = True)
     
     
     def simulate(self) -> Dict:
@@ -29,14 +36,16 @@ class Simulator():
         retries = 3
 
         survey_context: str = self.survey_context
-        survey_questions: List[Dict] = self.survey_questions
+       
 
 
         self.simulator.inject_memory(survey_context)
-        for k, v in self.demographic.items():
-            self.simulator.inject_memory(f"{k}: {v}")
+        # for k, v in self.demographic.items():
+        #     self.simulator.inject_memory(f"{k}: {v}")
         
 
+        #iterating through world state
+        survey_questions: List[Dict] = self.survey_questions
         for question in survey_questions:
             question_schema = question
             prompt = question_schema["question"] + "\nResponse schema:\n" + json.dumps(question_schema)

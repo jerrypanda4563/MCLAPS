@@ -5,28 +5,53 @@ from typing import Dict, Optional
 
 import app.mongo_config as mongo_db
 from app.internal import simulation
+from app.data_models import SurveyModel, DemographicModel, AgentParameters
 
-from app.internal.demgen import Demographic_Generator
-from app.internal.mclapsrl import mclapsrlClient
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
+from app.api_clients.mclaps_demgen import MclapsDemgenClient, DemgenRequest
 
 
+import time
 
 
-def run_simulation(survey: Dict, demographic_parameters: Dict, agent_model: str, agent_temperature: float, n_of_runs: int, sim_id: str, n_workers: Optional[int]=5) -> bool:
+demgen = MclapsDemgenClient()
+
+
+def run_simulation(sim_id: str, survey: Dict, demographic_parameters: DemographicModel, agent_params: AgentParameters, n_of_runs: int,  n_workers: Optional[int]=5) -> bool:
     
     database = mongo_db.collection_simulations
+
 
     # #manual counter creation in runner process for initial demgen thread
     # rate_limiter = mclapsrlClient()
     # rate_limiter.create_counter(agent_model)
 
-    demographic_generator=Demographic_Generator(demo=demographic_parameters, n_of_results=n_of_runs)
-    demographic_profiles=demographic_generator.generate_demographic_dataset()
-    print("demographic profiles generated")
-    simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_model=agent_model, agent_temperature=agent_temperature) for demo in demographic_profiles]
+    demographic_profiles = None
+    try:
+        demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sampling_conditions=demographic_parameters))
+    except Exception as e:
+        print(f"Demgen request failed: {e}")
+        traceback.print_exc()
+        return False
+    
+    task_ids = demgen_task["task_ids"] #list of task ids
+    dataset_id = demgen_task["dataset_id"]
+    task_states = False
+    while task_states is False:
+        task_states = demgen.get_task_status(task_ids)
+        if task_states == True:
+            demographic_profiles = demgen.get_task_results(task_ids)
+            print("Demographic profiles received.")
+        elif task_states == False:
+            print("Demgen in progress.")
+            time.sleep(5)
+        else:
+            print("Demgen task failed, ending simulation.")
+            return False
+
+    simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
     print("simulation instances created")
     n_of_completed_runs = 0
 

@@ -1,6 +1,6 @@
 from app.internal import agent_data
 from app.internal.tokenizer import count_tokens
-from app.internal.mclapsrl import mclapsrlClient, parse_response
+from app.api_clients.mclapsrl import mclapsrlClient
 from app import settings
 
 import json
@@ -140,7 +140,7 @@ class Agent:
             return response
     
     
-    #endpoints
+    #interacted functions
     def chat(self, query:str) -> str:
         self.construct_st_memory(query)
         response = self.model_response(query)

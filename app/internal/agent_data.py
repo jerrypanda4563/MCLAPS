@@ -16,7 +16,7 @@ import random
 import spacy
 from concurrent.futures import as_completed, ProcessPoolExecutor, ThreadPoolExecutor
 import math
-from app.internal.mclapsrl import mclapsrlClient
+from app.api_clients.mclapsrl import mclapsrlClient
 
 
 nlp = spacy.load("en_core_web_sm")

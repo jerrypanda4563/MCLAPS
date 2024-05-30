@@ -14,3 +14,4 @@ pytest
 celery
 spacy
 tiktoken
+rq

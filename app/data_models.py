@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Union, Literal
+import datetime
 
 
 
@@ -106,6 +107,8 @@ class SurveyModel(BaseModel):
 class AgentParameters(BaseModel):
     agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview" ]] = "gpt-3.5-turbo"
     agent_temperature: Optional[float] = 1.21
+    existance_date: Optional[str] = datetime.date.today().isoformat()
+    json_mode: Optional[bool] = True
     class Config:
         extra="forbid"
 

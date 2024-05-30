@@ -2,7 +2,7 @@ from app.internal import runner
 from app.internal import data_services
 import app.mongo_config as mongo_db
 from app.data_models import SimulationParameters
-import app.internal.mclapsrl as mclapsrl
+import app.api_clients.mclapsrl as mclapsrl
 
 from tests import test
 from typing import Dict, List
@@ -15,10 +15,17 @@ import json
 
 import uuid
 
+from app.api_clients.mclaps_demgen import MclapsDemgenClient
 
 
 
+
+
+demgen_client = MclapsDemgenClient()
 application = FastAPI()
+
+
+
 
 @application.get("/")
 async def root():
@@ -27,12 +34,22 @@ async def root():
 
 @application.get("/connection_test")
 async def test_services():
-    mclapsrl_client = mclapsrl.mclapsrlClient()
+
     openai_status=test.openai_connection_test()
     mongo_status=test.mongo_connection_test()
     redis_status=test.redis_connection_test()
+    mclapsrl_client = mclapsrl.mclapsrlClient()
     mclapsrl_status = mclapsrl_client.check_service_status()
-    return {"OpenAI Status": str(openai_status), "Mongo Status": str(mongo_status), "Redis Status": str(redis_status), "RateLimiter Status": mclapsrl_status}
+    demgen_client = MclapsDemgenClient()
+    demgen_status = demgen_client.service_status()
+
+    return {
+        "OpenAI Status": openai_status, 
+        "Mongo Status": mongo_status,
+        "Redis Status": redis_status, 
+        "RateLimiter Status": mclapsrl_status, 
+        "Demgen Status": demgen_status
+        }
 
 
 
@@ -41,6 +58,8 @@ async def test_services():
 async def new_simulation(sim_param: SimulationParameters,
                                 background_tasks: BackgroundTasks):
     
+    #unwraps simulation parameters
+
     if test.mongo_connection_test():
         print("MongoDB connection successful.")
 
@@ -49,6 +68,7 @@ async def new_simulation(sim_param: SimulationParameters,
         n_of_workers=sim_param.workers
         survey_params=sim_param.survey_params
         demographic_params=sim_param.demographic_params
+        agent_params=sim_param.agent_params
         
 
         
@@ -72,15 +92,9 @@ async def new_simulation(sim_param: SimulationParameters,
             "questions": [json.loads(question.json()) for question in survey_params.questions]
         }
 
-        demo_object = json.loads(demographic_params.json())
-
-        agent_model = sim_param.agent_params.agent_model
-        agent_temperature = sim_param.agent_params.agent_temperature
-        
-
 
         try:
-            background_tasks.add_task(runner.run_simulation, survey_object, demo_object, agent_model, agent_temperature, n_of_runs, sim_id, n_of_workers)
+            background_tasks.add_task(runner.run_simulation, sim_id, survey_object, demographic_params, agent_params, n_of_runs, n_of_workers)
         except Exception as e:
             raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
 
