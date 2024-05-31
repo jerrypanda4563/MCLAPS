@@ -11,7 +11,7 @@ COPY ./simulations /code/simulations
 
 EXPOSE 80
 
-CMD ["uvicorn", "app.main:application", "--host", "0.0.0.0", "--port", "80", "python worker.py"]
+CMD ["uvicorn", "app.main:application", "--host", "0.0.0.0", "--port", "80"]
 
 
 
