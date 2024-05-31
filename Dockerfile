@@ -9,13 +9,6 @@ COPY ./app /code/app
 COPY ./tests /code/tests
 COPY ./simulations /code/simulations
 
-# Install supervisord
-RUN apt-get update && apt-get install -y supervisor
-
-# Copy supervisord configuration file
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
 EXPOSE 80
 
-# CMD ["uvicorn", "app.main:application", "--host", "0.0.0.0", "--port", "80"]
-CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["uvicorn", "app.main:application", "--host", "0.0.0.0", "--port", "80 & python worker.py"]
