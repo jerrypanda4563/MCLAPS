@@ -168,26 +168,44 @@ async def sim_status(sim_id: str):
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
             
             
+from rq.registry import FinishedJobRegistry, StartedJobRegistry, FailedJobRegistry
+
+@application.get("/simulations/all_tasks")
+async def all_tasks():
+    try:
+        queued_jobs = queue.jobs
+        queued_job_ids = [job.id for job in queued_jobs]
+
+        # Get started jobs
+        started_registry = StartedJobRegistry(queue=queue)
+        started_job_ids = started_registry.get_job_ids()
+
+
+        # Get finished jobs
+        finished_registry = FinishedJobRegistry(queue=queue)
+        finished_job_ids = finished_registry.get_job_ids()
+
+
+        # Get failed jobs
+        failed_registry = FailedJobRegistry(queue=queue)
+        failed_job_ids = failed_registry.get_job_ids()
+
+        return {"finished tasks":  finished_job_ids, "started tasks": started_job_ids,  "queued tasks": queued_job_ids, "failed tasks": failed_job_ids}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching tasks: {e}")
+
+@application.get("/simulations/clear_tasks")
+async def clear_tasks():
+    try:
+        queue.empty()
+        return {"message": "All tasks cleared."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
 
 
 
-
-@application.get("/simulations/simulation_status")
-async def simulation_status(sim_id: str):
-    if test.mongo_connection_test():
-        print("MongoDB connection successful.")
-        database = mongo_db.collection_simulations
-        obj: Dict = database.find_one({"_id": sim_id})
-        if obj:
-            run_status = obj["Run Status"]
-            completed_runs = obj["Completed Runs"]
-            total_runs = obj["Number of Runs"]
-            return {"Run Status": run_status, "Completion Percentage": f"{completed_runs} out of {total_runs} runs completed."}
-        else:
-            raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
-    else:
-        raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
-
+    
         
     
 
