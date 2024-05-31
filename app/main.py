@@ -108,11 +108,11 @@ async def new_simulation(sim_param: SimulationParameters,
         except Exception as e:
             raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
         
-        tasks = {k:v for k,v in zip([task.id for task in tasks], request_batches)}
+        tasks_queued = {k:v for k,v in zip([task.id for task in tasks], request_batches)}
 
         data_object: Dict = {
             "_id":sim_id,
-            "Queued Tasks": tasks,
+            "Queued Tasks": tasks_queued,
             "Survey Name": survey_params.name,
             "Survey Description": survey_params.description,
             "Survey Questions": [json.loads(question.json()) for question in survey_params.questions],
