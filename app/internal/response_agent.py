@@ -34,7 +34,7 @@ class Agent:
     
 
     #add limiter
-    def embed(self, string:str, embedding_model: Optional[str] = "text_embedding-3-small") -> np.ndarray:
+    def embed(self, string:str, embedding_model: Optional[str] = "text-embedding-3-small") -> np.ndarray:
         while rate_limiter.model_status(embedding_model) == False:
             time.sleep(2)
         response=openai.Embedding.create(

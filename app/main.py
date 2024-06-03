@@ -96,20 +96,20 @@ async def new_simulation(sim_param: SimulationParameters,
 
         try:
             tasks = [queue.enqueue(runner.run_simulation, args = (sim_id, survey_object, demographic_params, agent_params, batch_sample_size, n_of_workers), retry = rq.Retry(max=3, interval = 10), results_ttl = 3600) for batch_sample_size in request_batches]
-            
-            queued_jobs = queue.jobs
-            started_registry = rq.registry.StartedJobRegistry(queue=queue)
-            started_job_ids = started_registry.get_job_ids()
-            started_jobs = [queue.fetch_job(job_id) for job_id in started_job_ids]
-            all_jobs = started_jobs + queued_jobs
-            job_ids = [job.id for job in all_jobs]
-            queue_positions = [(job_ids.index(task.id) + 1) for task in tasks]
-            logger.info(f"Tasks {tasks} enqueued, queue position: {queue_positions}.")
         except Exception as e:
-            raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
+            raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.') 
+        
+        queued_jobs = queue.get_job_ids()
+
+        # Fetch started jobs, get queue positions of tasks
+        started_registry = rq.registry.StartedJobRegistry(queue=queue)
+        started_job_ids = started_registry.get_job_ids()
+        all_job_ids = queued_jobs + started_job_ids
+        job_position_map = {job_id: idx + 1 for idx, job_id in enumerate(all_job_ids)}
+        queue_positions = [job_position_map.get(task.id, -1) for task in tasks]
+        
         
         tasks_queued = {k:v for k,v in zip([task.id for task in tasks], request_batches)}
-
         data_object: Dict = {
             "_id":sim_id,
             "Queued Tasks": tasks_queued,
