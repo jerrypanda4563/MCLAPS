@@ -83,6 +83,8 @@ async def new_simulation(sim_param: SimulationParameters,
             "questions": [json.loads(question.dict()) for question in survey_params.questions]
         }
 
+        print(survey_object["questions"][0])
+
         #batching the simulation runs
         batch_size = 250
         if n_of_runs > batch_size:
