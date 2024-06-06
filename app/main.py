@@ -80,7 +80,7 @@ async def new_simulation(sim_param: SimulationParameters,
         
         survey_object: Dict[str, List[Dict]] = {
             "description": survey_params.description,
-            "questions": [json.loads(question.json()) for question in survey_params.questions]
+            "questions": [json.loads(question.dict()) for question in survey_params.questions]
         }
 
         #batching the simulation runs
