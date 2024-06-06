@@ -75,7 +75,7 @@ class AgentData:
     def __init__(self):
         self.DataStrings: List[DataStr] = []  
         self.DataChunks: List[Chunk] = []  
-        self.memory_size: int = 1000       #####INCEASE FOR PRODUCTION
+        self.memory_size: int = 5000       #####INCEASE FOR PRODUCTION
         self.conjugate_matrix: np.ndarray = np.array([[]]) 
         self.L2_conjugate_matrix: np.ndarray = np.array([[]]) 
         self.L2_diagnolized: np.ndarray = np.array([[]]) 
