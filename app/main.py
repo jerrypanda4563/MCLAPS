@@ -78,10 +78,7 @@ async def new_simulation(sim_param: SimulationParameters,
         demographic_params=sim_param.demographic_params
         agent_params=sim_param.agent_params
         
-        survey_object: Dict[str, List[Dict]] = {
-            "description": survey_params.description,
-            "questions": [json.loads(question.json()) for question in survey_params.questions]
-        }
+        survey_object: dict = survey_params.dict()
 
         print(survey_object["questions"][0])   #debug print
 
