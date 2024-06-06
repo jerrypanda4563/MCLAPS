@@ -2,7 +2,7 @@ from app.internal import response_agent
 from app.data_models import SurveyModel, DemographicModel, AgentParameters
 import traceback
 from typing import Dict, List
-from prompt_payloads import input_question, initialization_prompt
+from app.internal.prompt_payloads import input_question, initialization_prompt
 
 import json
 import openai.error
