@@ -29,11 +29,14 @@ def long_answer_prompt(question: Dict[str, Any]) -> str:
 
 
 def multiple_choice_prompt(question: Dict[str, Any]) -> str:
-    question_text: str = question["question"]
-    choices: List[str] = question["choices"]
-    question_payload = question_text + "\n" + "\n".join([f"Choice {i+1}: {option}" for i, option in enumerate(choices)]) + "\n Your response must be one of the choices given"
-    prompt_payload = f"{question_payload}\n\nJSON response schema:\n {json.dumps(answer_schema)}"
-    return prompt_payload
+    try:
+        question_text: str = question["question"]
+        choices: List[str] = question["choices"]
+        question_payload = question_text + "\n" + "\n".join([f"Choice {i+1}: {option}" for i, option in enumerate(choices)]) + "\n Your response must be one of the choices given"
+        prompt_payload = f"{question_payload}\n\nJSON response schema:\n {json.dumps(answer_schema)}"
+        return prompt_payload
+    except Exception as e:
+        print(f"Error in generating multiple choice prompt for {question}: {e}")
 
 def checkbox_prompt(question: Dict[str, Any]) -> str:
     question_text: str = question["question"]
