@@ -48,6 +48,7 @@ class Simulator():
         #iterating through world state
         survey_questions: List[Dict] = self.survey_questions
         for question in survey_questions:
+            print(question) ##debug print
             response_schema = question
             prompt: str = input_question(question)
 
