@@ -147,7 +147,7 @@ class Agent:
     
     #interacted functions
     def chat(self, query:str) -> str:
-        self.construct_st_memory(query)
+        self.construct_st_memory(query)   #changes system message
         response = self.model_response(query)
         self.st_memory.append(":\n".join([query,response]))
         if self.st_memory_length() > self.st_memory_capacity:
