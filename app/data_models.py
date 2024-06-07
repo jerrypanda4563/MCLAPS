@@ -62,7 +62,7 @@ class DemographicModel(BaseModel):
     class Config:
         extra = "forbid"  # Forbids any extra fields not defined in the model
 
-#survey validation model
+#survey_validation
 class ShortAnswerQuestion(BaseModel):
     type: str = Field("short answer", Literal=True)
     question: str
@@ -102,7 +102,6 @@ class SurveyModel(BaseModel):
         if v.type not in ["short answer", "long answer", "multiple choice", "checkboxes", "linear scale"]:
             raise ValueError('Invalid question type')
         return v
-
 
 class AgentParameters(BaseModel):
     agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview" ]] = "gpt-3.5-turbo"
