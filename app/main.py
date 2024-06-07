@@ -39,6 +39,13 @@ logger = logging.getLogger(__name__)
 async def root():
     return{"API Connection": "Success!"}
 
+@application.post("/debug")
+async def debug(body: SurveyModel):
+    return{
+        "Survey Name": body.name,
+        "Survey Description": body.description,
+        "Survey Questions": [json.loads(question.json()) for question in body.questions]
+    }
 
 
 
@@ -81,8 +88,6 @@ async def new_simulation(sim_param: SimulationParameters,
         agent_params=sim_param.agent_params
         
         survey_object: dict = survey_params.dict()
-
-        print(survey_object["questions"][0])   #debug print
 
         #batching the simulation runs
         batch_size = 250
