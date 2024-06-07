@@ -40,11 +40,16 @@ async def root():
     return{"API Connection": "Success!"}
 
 #temp
-@application.get("/debug")
+@application.post("/debug")
 async def debug(req_bod: SimulationParameters):
     survey_params = req_bod.survey_params
-    survey_questions = survey_params.questions
-    return survey_questions
+    survey_dict = survey_params.dict()
+    survey_questions = survey_dict["questions"]
+    return {
+        "params": survey_params,
+        "dict": survey_dict,
+        "questions": survey_questions
+    }
 
 
 @application.get("/connection_test")
