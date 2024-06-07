@@ -64,29 +64,29 @@ class DemographicModel(BaseModel):
 
 #survey_validation
 class ShortAnswerQuestion(BaseModel):
-    type: str = Field("short answer", const=True)
+    type: str = Field("short answer", Literal=True)
     question: str
     answer: None
     
 class LongAnswerQuestion(BaseModel):
-    type: str = Field("long answer", const=True)
+    type: str = Field("long answer", Literal=True)
     question: str
     answer: None
 
 class MultipleChoiceQuestion(BaseModel):
-    type: str = Field("multiple choice", const=True)
+    type: str = Field("multiple choice", Literal=True)
     question: str
     choices: list[str]
     answer: None
 
 class CheckboxesQuestion(BaseModel):
-    type: str = Field("checkboxes", const=True)
+    type: str = Field("checkboxes", Literal=True)
     question: str
     choices: list[str]
     answer: None
 
 class LinearScaleQuestion(BaseModel):
-    type: str = Field("linear scale", const=True)
+    type: str = Field("linear scale", Literal=True)
     question: str
     min_value: int
     max_value: int
@@ -95,7 +95,7 @@ class LinearScaleQuestion(BaseModel):
 class SurveyModel(BaseModel):
     name: str
     description: Optional[str] = None
-    questions: List[Union[ShortAnswerQuestion, LongAnswerQuestion, MultipleChoiceQuestion, CheckboxesQuestion, LinearScaleQuestion]]
+    questions: List[Union[MultipleChoiceQuestion, CheckboxesQuestion, LinearScaleQuestion, ShortAnswerQuestion, LongAnswerQuestion]]
 
     @validator('questions', each_item=True)
     def check_question_type(cls, v):
