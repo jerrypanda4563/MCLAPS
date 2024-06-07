@@ -39,6 +39,13 @@ logger = logging.getLogger(__name__)
 async def root():
     return{"API Connection": "Success!"}
 
+#temp
+@application.get("/debug")
+async def debug(req_bod: SimulationParameters):
+    survey_params = req_bod.survey_params
+    survey_questions = survey_params.questions
+    return survey_questions
+
 
 @application.get("/connection_test")
 async def test_services():
