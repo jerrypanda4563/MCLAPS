@@ -13,8 +13,7 @@ answer_schema = {"answer": ""}
 
 def short_answer_prompt(question: Dict[str, Any]) -> str:
     question_text: str = question["question"]
-    answer_type = question["answer"]
-    question_payload = question_text + f"\n Your response must be a short answer of type {answer_type}"
+    question_payload = question_text + f"\n Your response must be a short answer."
     prompt_payload = question_payload + "\n JSON response schema:\n" + json.dumps(answer_schema)
     return prompt_payload
 
@@ -22,8 +21,7 @@ def short_answer_prompt(question: Dict[str, Any]) -> str:
 
 def long_answer_prompt(question: Dict[str, Any]) -> str:
     question_text: str = question["question"]
-    answer_type = question["answer"]
-    question_payload = question_text + f"\n Your response must be a long answer of type {answer_type}"
+    question_payload = question_text + f"\n Your response must be a long answer."
     prompt_payload = question_payload + "\n JSON response schema:\n" + json.dumps(answer_schema)
     return prompt_payload
 

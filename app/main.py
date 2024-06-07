@@ -39,15 +39,7 @@ logger = logging.getLogger(__name__)
 async def root():
     return{"API Connection": "Success!"}
 
-#temp
-@application.post("/debug")
-async def debug(req_bod: SurveyModel):
-    # survey_params = req_bod.survey_params
-    survey_dict = req_bod.dict()
-    return {
-        "request_body": req_bod,
-        "survey_dict": survey_dict,
-    }
+
 
 
 @application.get("/connection_test")
