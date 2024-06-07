@@ -3,7 +3,7 @@ from app.internal import runner
 from app.internal import data_services
 import app.mongo_config as mongo_db
 from app.redis_config import cache 
-from app.data_models import SimulationParameters
+from app.data_models import SimulationParameters, SurveyModel
 import app.api_clients.mclapsrl as mclapsrl
 
 from tests import test
@@ -41,9 +41,9 @@ async def root():
 
 #temp
 @application.post("/debug")
-async def debug(req_bod: SimulationParameters):
-    survey_params = req_bod.survey_params
-    survey_dict = survey_params.dict()
+async def debug(req_bod: SurveyModel):
+    # survey_params = req_bod.survey_params
+    survey_dict = req_bod.dict()
     survey_questions = survey_dict["questions"]
     return {
         "params": survey_params,
