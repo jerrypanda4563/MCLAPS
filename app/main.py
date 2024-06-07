@@ -72,8 +72,7 @@ async def test_services():
 
 
 @application.post("/simulations/new_simulation")
-async def new_simulation(sim_param: SimulationParameters,
-                                background_tasks: BackgroundTasks):
+async def new_simulation(sim_param: SimulationParameters):
     
     #unwraps simulation parameters
 
