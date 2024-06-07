@@ -44,11 +44,9 @@ async def root():
 async def debug(req_bod: SurveyModel):
     # survey_params = req_bod.survey_params
     survey_dict = req_bod.dict()
-    survey_questions = survey_dict["questions"]
     return {
-        "params": survey_params,
-        "dict": survey_dict,
-        "questions": survey_questions
+        "request_body": req_bod,
+        "survey_dict": survey_dict,
     }
 
 
