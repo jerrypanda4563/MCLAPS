@@ -100,7 +100,7 @@ async def new_simulation(sim_param: SimulationParameters):
             request_batches = [n_of_runs]
 
         try:
-            tasks = [queue.enqueue(runner.run_simulation, args = (sim_id, survey_object, demographic_params, agent_params, batch_sample_size, n_of_workers), retry = rq.Retry(max=3, interval = 10), results_ttl = 3600) for batch_sample_size in request_batches]
+            tasks = [queue.enqueue(runner.run_simulation, args = (sim_id, survey_object, demographic_params, agent_params, batch_sample_size, n_of_workers), retry = rq.Retry(max=3, interval = 10), results_ttl = 7200, timeout = 7200) for batch_sample_size in request_batches]
         except Exception as e:
             raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.') 
         
