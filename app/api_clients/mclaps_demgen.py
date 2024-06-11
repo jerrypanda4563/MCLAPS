@@ -8,6 +8,7 @@ from app.settings import MCLAPS_DEMGEN_API
 
 class DemgenRequest(BaseModel):
     number_of_samples: int
+    sim_id: str
     sampling_conditions: DemographicModel
 
 

@@ -30,7 +30,7 @@ def run_simulation(sim_id: str, survey: Dict, demographic_parameters: Demographi
 
     demographic_profiles = None
     try:
-        demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sampling_conditions=demographic_parameters))
+        demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sim_id = sim_id, sampling_conditions=demographic_parameters))
     except Exception as e:
         print(f"Demgen request failed: {e}")
         traceback.print_exc()
