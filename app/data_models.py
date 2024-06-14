@@ -107,7 +107,7 @@ class SurveyModel(BaseModel):
 
     @validator('questions', each_item=True)
     def check_question_type(cls, v):
-        if v.type not in ["short answer", "long answer", "multiple choice", "checkboxes", "linear scale"]:
+        if v.type not in ["short answer", "long answer", "multiple choice", "checkboxes", "ranking", "linear scale"]:
             raise ValueError('Invalid question type')
         return v
 
