@@ -27,7 +27,7 @@ class Simulator():
 
         self.simulator = response_agent.Agent(
             ##replace with initialization prompt
-            instruction = initialization_prompt(demographic), 
+            instruction = initialization_prompt(self.demographic, self.persona), 
             params = agent_params
             )
     
