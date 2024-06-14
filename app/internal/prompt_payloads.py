@@ -25,11 +25,20 @@ def long_answer_prompt(question: Dict[str, Any]) -> str:
     prompt_payload = question_payload + "\n JSON response schema:\n" + json.dumps(answer_schema)
     return prompt_payload
 
+def ranking_prompt(question: Dict[str, Any]) -> str:
+    question_text: str = question["question"]
+    choices: List[str] = question["choices"]
+    question_payload = question_text + "The choices are:\n" + "\n".join([f"{option}" for option in choices]) + "\n Your response must be a ranked list of the choices given."
+    # question_payload = question_text + "\n" + "\n".join([f"Choice {i+1}: {option}" for i, option in enumerate(choices)]) + "\n Your response must be a ranking of the choices given."
+    prompt_payload = question_payload + "\n JSON response schema:\n" + json.dumps(answer_schema)
+    return prompt_payload
 
 def multiple_choice_prompt(question: Dict[str, Any]) -> str:
     question_text: str = question["question"]
     choices: List[str] = question["choices"]
-    question_payload = question_text + "\n" + "\n".join([f"Choice {i+1}: {option}" for i, option in enumerate(choices)]) + "\n Your response must be one of the choices given"
+    question_payload = question_text + "The choices are:\n" + "\n".join([f"{option}" for option in choices]) + "\n Your response must be one of the choices given."
+    # question_payload = question_text + "\n" + "\n".join([f"Choice {i+1}: {option}" for i, option in enumerate(choices)]) + "\n Your response must be one of the choices given."
+
     prompt_payload = question_payload + "\n JSON response schema:\n" + json.dumps(answer_schema)
     return prompt_payload
 
@@ -37,7 +46,8 @@ def multiple_choice_prompt(question: Dict[str, Any]) -> str:
 def checkbox_prompt(question: Dict[str, Any]) -> str:
     question_text: str = question["question"]
     choices: List[str] = question["choices"]
-    question_payload = question_text + "\n" + "\n".join([f"Choice {i+1}: {option}" for i, option in enumerate(choices)]) + "\n Your response must be one or multiple choices from the choices given"
+    question_payload = question_text + "The choices are:\n" + "\n".join([f"{option}" for option in choices]) + "\n Your response must be one or multiple choices from the choices given."
+    # question_payload = question_text + "The choices are:\n" + "\n".join([f"Choice {i+1}: {option}" for i, option in enumerate(choices)]) + "\n Your response must be one or multiple choices from the choices given"
     prompt_payload = question_payload + "\n JSON response schema:\n" + json.dumps(answer_schema)
     return prompt_payload
 
@@ -64,6 +74,9 @@ def input_question( question: Dict) -> str:
     elif question["type"] == "checkboxes":
         return checkbox_prompt(question)
     
+    elif question["type"] == "ranking":
+        return ranking_prompt(question)
+    
     elif question["type"] == "linear scale":
         return linear_scale_prompt(question)
     
@@ -71,9 +84,12 @@ def input_question( question: Dict) -> str:
         return str(question)
 
 ## agent initialization prompt: input is demographic parameters, initial world state/ instructions from survey body, output is a string
-def initialization_prompt(demographic: Dict) -> str: 
+def initialization_prompt(demographic: Dict, persona: str) -> str: 
     demographic_information = '\n'.join([f"{k}: {v}" for k, v in demographic.items()])
-    prompt_payload = f"You are not a helpful assistant. You are a person with the following identity:\n"+f"{demographic_information}\n\n" + f"You must think and behave as how this person would behave when responding to user queries."
+    prompt_payload = f"You are not a helpful assistant. You are a person with the following identity:\n"
+    +f"{demographic_information}\n\n" 
+    + f"Your self description is: \n {persona}" 
+    + "You must think and behave as this identity when responding to user queries."
     return prompt_payload
 
     

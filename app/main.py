@@ -39,14 +39,6 @@ logger = logging.getLogger(__name__)
 async def root():
     return{"API Connection": "Success!"}
 
-@application.post("/debug")
-async def debug(body: SurveyModel):
-    return{
-        "Survey Name": body.name,
-        "Survey Description": body.description,
-        "Survey Questions": [json.loads(question.json()) for question in body.questions]
-    }
-
 
 
 @application.get("/connection_test")
@@ -68,6 +60,42 @@ async def test_services():
         "Demgen Status": demgen_status
         }
 
+
+           
+from rq.registry import FinishedJobRegistry, StartedJobRegistry, FailedJobRegistry
+
+@application.get("/simulations/all_tasks")
+async def all_tasks():
+    try:
+        queued_jobs = queue.jobs
+        queued_job_ids = [job.id for job in queued_jobs]
+
+        # Get started jobs
+        started_registry = StartedJobRegistry(queue=queue)
+        started_job_ids = started_registry.get_job_ids()
+
+
+        # Get finished jobs
+        finished_registry = FinishedJobRegistry(queue=queue)
+        finished_job_ids = finished_registry.get_job_ids()
+
+
+        # Get failed jobs
+        failed_registry = FailedJobRegistry(queue=queue)
+        failed_job_ids = failed_registry.get_job_ids()
+
+        return {"finished tasks":  finished_job_ids, "started tasks": started_job_ids,  "queued tasks": queued_job_ids, "failed tasks": failed_job_ids}
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching tasks: {e}")
+
+@application.get("/simulations/clear_tasks")
+async def clear_tasks():
+    try:
+        queue.empty()
+        return {"message": "All tasks cleared."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
 
 
 
@@ -121,7 +149,6 @@ async def new_simulation(sim_param: SimulationParameters):
         job_position_map = {job_id: idx + 1 for idx, job_id in enumerate(all_job_ids)}
         queue_positions = [job_position_map.get(task.id, -1) for task in tasks]
         
-        
         tasks_queued = {k:v for k,v in zip([task.id for task in tasks], request_batches)}
         data_object: Dict = {
             "_id":sim_id,
@@ -159,66 +186,32 @@ async def sim_status(sim_id: str):
             simulation_obj: Dict = database.find_one({"_id": sim_id})
         except Exception as e:
             raise HTTPException(status_code=404, detail=f"Simulation id {sim_id} doesnt exist {e}")
+        try:
+            queued_tasks: Dict = simulation_obj["Queued Tasks"]
+            task_states = []
+            for task_id in list(queued_tasks.keys()):
+                task = queue.fetch_job(task_id)
+                task_states.append(task.get_status())
+            
+            if all(task == "finished" for task in task_states):
+                database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
+                return {sim_id: f"Completed. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed."}
+            
+            if all(task == "failed" for task in task_states):
+                database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
+                return {sim_id: f"All tasks failed. Completed {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs."}
+            
 
-        queued_tasks: Dict = simulation_obj["Queued Tasks"]
-        task_states = []
-        for task_id in list(queued_tasks.keys()):
-            task = queue.fetch_job(task_id)
-            task_states.append(task.get_status())
+            return {
+                sim_id: f"Running. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed.", 
+                "Task Status": task_states
+                }
         
-        if all(task == "finished" for task in task_states):
-            database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
-            return {sim_id: f"Completed. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed."}
-        
-        if all(task == "failed" for task in task_states):
-            database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
-            return {sim_id: f"All tasks failed. Completed {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs."}
-        
-
-        return {sim_id: f"Running. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed.", "Task Status": task_states}
-        
+        except Exception as e:
+            return {sim_id: f"Run Status: {simulation_obj['Run Status']}. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed.",}
+    
     else:
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
-            
-            
-from rq.registry import FinishedJobRegistry, StartedJobRegistry, FailedJobRegistry
-
-@application.get("/simulations/all_tasks")
-async def all_tasks():
-    try:
-        queued_jobs = queue.jobs
-        queued_job_ids = [job.id for job in queued_jobs]
-
-        # Get started jobs
-        started_registry = StartedJobRegistry(queue=queue)
-        started_job_ids = started_registry.get_job_ids()
-
-
-        # Get finished jobs
-        finished_registry = FinishedJobRegistry(queue=queue)
-        finished_job_ids = finished_registry.get_job_ids()
-
-
-        # Get failed jobs
-        failed_registry = FailedJobRegistry(queue=queue)
-        failed_job_ids = failed_registry.get_job_ids()
-
-        return {"finished tasks":  finished_job_ids, "started tasks": started_job_ids,  "queued tasks": queued_job_ids, "failed tasks": failed_job_ids}
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching tasks: {e}")
-
-@application.get("/simulations/clear_tasks")
-async def clear_tasks():
-    try:
-        queue.empty()
-        return {"message": "All tasks cleared."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
-
-
-
-    
         
     
 

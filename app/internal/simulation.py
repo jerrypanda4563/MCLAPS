@@ -22,7 +22,8 @@ class Simulator():
         self.survey_responses: List[Dict] = []
         self.survey_context: str = survey["description"]
         self.survey_questions: List[Dict] = survey["questions"]
-        self.demographic: Dict = demographic
+        self.demographic: Dict = demographic["demographic"]
+        self.persona: Dict = demographic["persona"]
 
         self.simulator = response_agent.Agent(
             ##replace with initialization prompt
@@ -81,7 +82,8 @@ class Simulator():
         
         simulation_result = {
             "response_data": self.survey_responses,
-            "demographic_data": self.demographic
+            "demographic_data": self.demographic,
+            "persona": self.persona
         }
 
         return simulation_result

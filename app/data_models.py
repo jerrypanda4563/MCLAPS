@@ -63,15 +63,6 @@ class DemographicModel(BaseModel):
         extra = "forbid"  # Forbids any extra fields not defined in the model
 
 #survey_validation
-class ShortAnswerQuestion(BaseModel):
-    type: str = Field("short answer", Literal=True)
-    question: str
-    answer: None
-    
-class LongAnswerQuestion(BaseModel):
-    type: str = Field("long answer", Literal=True)
-    question: str
-    answer: None
 
 class MultipleChoiceQuestion(BaseModel):
     type: str = Field("multiple choice", Literal=True)
@@ -85,6 +76,12 @@ class CheckboxesQuestion(BaseModel):
     choices: list[str]
     answer: None
 
+class RankingQuestion(BaseModel):
+    type: str = Field("ranking", Literal=True)
+    question: str
+    choices: list[str]
+    answer: None
+
 class LinearScaleQuestion(BaseModel):
     type: str = Field("linear scale", Literal=True)
     question: str
@@ -92,10 +89,21 @@ class LinearScaleQuestion(BaseModel):
     max_value: int
     answer: None
 
+class ShortAnswerQuestion(BaseModel):
+    type: str = Field("short answer", Literal=True)
+    question: str
+    answer: None
+    
+class LongAnswerQuestion(BaseModel):
+    type: str = Field("long answer", Literal=True)
+    question: str
+    answer: None
+
+
 class SurveyModel(BaseModel):
     name: str
     description: Optional[str] = None
-    questions: List[Union[MultipleChoiceQuestion, CheckboxesQuestion, LinearScaleQuestion, ShortAnswerQuestion, LongAnswerQuestion]]
+    questions: List[Union[MultipleChoiceQuestion, CheckboxesQuestion, LinearScaleQuestion, RankingQuestion, ShortAnswerQuestion, LongAnswerQuestion]]
 
     @validator('questions', each_item=True)
     def check_question_type(cls, v):
