@@ -1,3 +1,4 @@
+import openai.error
 from app.internal import chunking
 from app.internal.tokenizer import count_tokens
 from app import settings
@@ -80,18 +81,28 @@ class AgentData:
         self.L2_conjugate_matrix: np.ndarray = np.array([[]]) 
         self.L2_diagnolized: np.ndarray = np.array([[]]) 
 
-    #add limiter
+    #return none if embedding failed
     def embed_large_text(self, text: str, embedding_model: Optional[str] = "text-embedding-3-small") -> np.ndarray:
         while rate_limiter.model_status(embedding_model) == False:
             time.sleep(2)
-            
-        response=Embedding.create(
-            model = embedding_model,
-            input=str(text)
-            )
-        rate_limiter.new_response(response)
-        embedding = np.array(response['data'][0]['embedding'])
-        return embedding
+            continue
+        retries = 5
+        while retries > 0:
+            try:
+                response=Embedding.create(
+                    model = embedding_model,
+                    input=str(text)
+                    )
+                rate_limiter.new_response(response)
+                embedding = np.array(response['data'][0]['embedding'])
+                return embedding
+            except (openai.error.OpenAIError, openai.error.Timeout, openai.error.ServiceUnavailableError, openai.error.RateLimitError) as e:
+                print(f"Error while embedding in agent data: {e}")
+                retries -= 1
+                time.sleep(5)
+                continue
+        
+
                 
     def embed_text(self, text: str) -> np.ndarray:
         processed_text = nlp(text)
@@ -299,29 +310,37 @@ class AgentData:
         if len(self.DataChunks) == 0:
             pass
         else:
-            query_embedding = self.embed_large_text(query_string)
-            query_conjugate_vector = self.compute_conjugate_vector(query_embedding)
-            top_5: List[int] = sorted(query_conjugate_vector.tolist(),reverse=True)[0:5]
-            return top_5
+            try:
+                query_embedding = self.embed_large_text(query_string)
+                query_conjugate_vector = self.compute_conjugate_vector(query_embedding)
+                top_5: List[int] = sorted(query_conjugate_vector.tolist(),reverse=True)[0:5]
+                return top_5
+            except Exception as e:
+                print(f"Error in L0 query: {e}")
+                return None
             
     def L1_query(self, query_string:str) -> List[str]:
         
         if len(self.DataChunks) == 0:
             return None
         else:
-            query_embedding = self.embed_large_text(query_string)
-            query_conjugate_vector = self.compute_conjugate_vector(query_embedding)
-            top_5 = sorted(enumerate(query_conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:5]
-            target_chunk_list = [self.DataChunks[index] for index, _ in top_5]
-            
-            reconstructed_strings = []
-            with ProcessPoolExecutor(max_workers=len(target_chunk_list)) as executor:
-                futures = {executor.submit(self.local_datastr_reconstruct, target_chunk, query_string) for target_chunk in target_chunk_list}
-                for future in as_completed(futures):
-                    reconstructed_strings.append(future.result())
-
+            try:
                 
-            return reconstructed_strings
+                query_embedding = self.embed_large_text(query_string)
+                query_conjugate_vector = self.compute_conjugate_vector(query_embedding)
+                top_5 = sorted(enumerate(query_conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:5]
+                target_chunk_list = [self.DataChunks[index] for index, _ in top_5]
+                
+                reconstructed_strings = []
+                with ProcessPoolExecutor(max_workers=len(target_chunk_list)) as executor:
+                    futures = {executor.submit(self.local_datastr_reconstruct, target_chunk, query_string) for target_chunk in target_chunk_list}
+                    for future in as_completed(futures):
+                        reconstructed_strings.append(future.result())
+                return reconstructed_strings
+            
+            except Exception as e:
+                print(f"Error in L1 query: {e}")
+                return None
 
 
     def fast_query(self, query_string: str) -> List[str]:
@@ -333,14 +352,18 @@ class AgentData:
         if len(self.DataChunks) == 0:
             return None
         else:
-            query_embedding = self.embed_large_text(query_string)
-            query_conjugate_vector = self.compute_conjugate_vector(query_embedding)
-            top_5 = sorted(enumerate(query_conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:5]
-            target_chunk_list = [self.DataChunks[index] for index, _ in top_5]
-            reconstructed_strings = []
-            for target_chunk in target_chunk_list:
-                reconstructed_strings.append(chunk_group_reconstruct(target_chunk))
-            return reconstructed_strings
+            try:
+                query_embedding = self.embed_large_text(query_string)
+                query_conjugate_vector = self.compute_conjugate_vector(query_embedding)
+                top_5 = sorted(enumerate(query_conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:5]
+                target_chunk_list = [self.DataChunks[index] for index, _ in top_5]
+                reconstructed_strings = []
+                for target_chunk in target_chunk_list:
+                    reconstructed_strings.append(chunk_group_reconstruct(target_chunk))
+                return reconstructed_strings
+            except Exception as e:
+                print(f"Error in fast query: {e}")
+                return None
 
 
 
@@ -365,34 +388,36 @@ class AgentData:
 
             return chunk
         
+        try:
+            datastr = input_string
+            datastr_embedding = self.embed_large_text(input_string)
+            datastr_uuid = uuid.uuid4()
+            datastr_chunked = chunking.chunk_string(input_string)
+            
+            
+            list_of_chunk_embeddings: List[np.ndarray] = []
+            with ThreadPoolExecutor(max_workers=len(datastr_chunked)) as executor:
+                list_of_chunk_embeddings = list(executor.map(self.embed_large_text, datastr_chunked))
 
-        datastr = input_string
-        datastr_embedding = self.embed_large_text(input_string)
-        datastr_uuid = uuid.uuid4()
-        datastr_chunked = chunking.chunk_string(input_string)
-        
-        
-        list_of_chunk_embeddings: List[np.ndarray] = []
-        with ThreadPoolExecutor(max_workers=len(datastr_chunked)) as executor:
-            list_of_chunk_embeddings = list(executor.map(self.embed_large_text, datastr_chunked))
 
-
-        list_of_chunks: List[Chunk] = []    
-        for string, embedding in zip(datastr_chunked, list_of_chunk_embeddings):
-            data_chunk = add_chunk(datastr_index= len(list_of_chunks) , parent_str_id = datastr_uuid, input_string = string, input_string_embedding = embedding)
-            list_of_chunks.append(data_chunk)
-        
-        data_str = DataStr(
-            DataStr_id = datastr_uuid,
-            index = len(self.DataStrings),
-            chunks = list_of_chunks,
-            string = datastr,
-            embedding_vector = datastr_embedding
-        )
-        self.DataStrings.append(data_str)
-        
-        return data_str
-        
+            list_of_chunks: List[Chunk] = []    
+            for string, embedding in zip(datastr_chunked, list_of_chunk_embeddings):
+                data_chunk = add_chunk(datastr_index= len(list_of_chunks) , parent_str_id = datastr_uuid, input_string = string, input_string_embedding = embedding)
+                list_of_chunks.append(data_chunk)
+            
+            data_str = DataStr(
+                DataStr_id = datastr_uuid,
+                index = len(self.DataStrings),
+                chunks = list_of_chunks,
+                string = datastr,
+                embedding_vector = datastr_embedding
+            )
+            self.DataStrings.append(data_str)
+            
+            return data_str
+        except Exception as e:
+            print(f"Error in adding data string: {e}")
+            return None
         
     def query(self, input_string: str, evalutator_k: Optional[float] = 0):
         if len(self.DataChunks) == 0:

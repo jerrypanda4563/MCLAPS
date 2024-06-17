@@ -10,6 +10,7 @@ import numpy as np
 import spacy
 from typing import List, Optional
 import openai
+from openai.error import OpenAIError, Timeout, ServiceUnavailableError, RateLimitError
 from sklearn.metrics.pairwise import cosine_similarity as cs
 from concurrent.futures import ThreadPoolExecutor
 from app.data_models import AgentParameters
@@ -40,15 +41,24 @@ class Agent:
     def embed(self, string:str, embedding_model: Optional[str] = "text-embedding-3-small") -> np.ndarray:
         while rate_limiter.model_status(embedding_model) == False:
             time.sleep(2)
-        response=openai.Embedding.create(
-            model = embedding_model,
-            input=str(string)
-            )
+        retries = 5
+        while retries > 0:
+            try:
+                response=openai.Embedding.create(
+                    model = embedding_model,
+                    input=str(string)
+                    )
 
-        rate_limiter.new_response(response)
-        embedding = np.array(response['data'][0]['embedding'])
-        return embedding
-
+                rate_limiter.new_response(response)
+                embedding = np.array(response['data'][0]['embedding'])
+                return embedding
+            except (OpenAIError, Timeout, ServiceUnavailableError, RateLimitError) as e:
+                print(f"Error while embedding in response agent: {e}")
+                retries -= 1
+                time.sleep(5)
+                continue
+        return None
+        
         
 
     def evaluator(self, string1:str, string2:str) -> float:
