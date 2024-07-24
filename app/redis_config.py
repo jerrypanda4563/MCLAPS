@@ -1,7 +1,7 @@
 import redis
 from app import settings
 
-cache=redis.Redis.from_url(settings.REDIS_URI)
+cache=redis.Redis.from_url(settings.REDIS_URI, db = 0)
 
 def cache_connection_test() -> bool:
     try:

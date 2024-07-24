@@ -62,47 +62,54 @@ class DemographicModel(BaseModel):
     class Config:
         extra = "forbid"  # Forbids any extra fields not defined in the model
 
-#survey validation model
-class ShortAnswerQuestion(BaseModel):
-    type: str = Field("short answer", Literal=True)
-    question: str
-    answer: Optional[str] = None
-
-class LongAnswerQuestion(BaseModel):
-    type: str = Field("long answer", Literal=True)
-    question: str
-    answer: Optional[str] = None
+#survey_validation
 
 class MultipleChoiceQuestion(BaseModel):
     type: str = Field("multiple choice", Literal=True)
     question: str
-    choices: List[str]
-    answer: Optional[str] = None
+    choices: list[str]
+    answer: None
 
 class CheckboxesQuestion(BaseModel):
     type: str = Field("checkboxes", Literal=True)
     question: str
-    choices: List[str]
-    answer: Optional[List[str]] = None
+    choices: list[str]
+    answer: None
+
+class RankingQuestion(BaseModel):
+    type: str = Field("ranking", Literal=True)
+    question: str
+    choices: list[str]
+    answer: None
 
 class LinearScaleQuestion(BaseModel):
     type: str = Field("linear scale", Literal=True)
     question: str
     min_value: int
     max_value: int
-    answer: Optional[int] = None
+    answer: None
+
+class ShortAnswerQuestion(BaseModel):
+    type: str = Field("short answer", Literal=True)
+    question: str
+    answer: None
+    
+class LongAnswerQuestion(BaseModel):
+    type: str = Field("long answer", Literal=True)
+    question: str
+    answer: None
+
 
 class SurveyModel(BaseModel):
     name: str
     description: Optional[str] = None
-    questions: List[Union[ShortAnswerQuestion, LongAnswerQuestion, MultipleChoiceQuestion, CheckboxesQuestion, LinearScaleQuestion]]
+    questions: List[Union[MultipleChoiceQuestion, CheckboxesQuestion, LinearScaleQuestion, RankingQuestion, ShortAnswerQuestion, LongAnswerQuestion]]
 
     @validator('questions', each_item=True)
     def check_question_type(cls, v):
-        if v.type not in ["short answer", "long answer", "multiple choice", "checkboxes", "linear scale"]:
+        if v.type not in ["short answer", "long answer", "multiple choice", "checkboxes", "ranking", "linear scale"]:
             raise ValueError('Invalid question type')
         return v
-
 
 class AgentParameters(BaseModel):
     agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview" ]] = "gpt-3.5-turbo"

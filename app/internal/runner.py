@@ -30,7 +30,7 @@ def run_simulation(sim_id: str, survey: Dict, demographic_parameters: Demographi
 
     demographic_profiles = None
     try:
-        demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sampling_conditions=demographic_parameters))
+        demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sim_id = sim_id, sampling_conditions=demographic_parameters))
     except Exception as e:
         print(f"Demgen request failed: {e}")
         traceback.print_exc()
@@ -68,10 +68,17 @@ def run_simulation(sim_id: str, survey: Dict, demographic_parameters: Demographi
                 database.update_one(query, {"$inc":{"Completed Runs": 1}})
                 print(f"Completed {n_of_completed_runs} of {n_of_runs} runs, responses are {answers}.")
                 if n_of_completed_runs == n_of_runs:
-                    run_status = False
-                    database.update_one(query, {"$set":{"Run Status": run_status}})
-                    print(f"All runs completed for simulation {sim_id}.")
-                    return True
+                    query = {"_id": sim_id}
+                    runs_total = database.find_one(query, "Number of Runs")
+                    runs_completed = database.find_one(query, "Completed Runs")
+                    if runs_total == runs_completed:
+                        run_status = False
+                        database.update_one(query, {"$set":{"Run Status": run_status}})
+                        print(f"All runs completed for simulation {sim_id}.")
+                        return True
+                    else:
+                        print(f"Task batch completed. Simulation {sim_id} has {runs_completed} of {runs_total} runs completed.")
+                        return True
         
                 
     except Exception as e:
