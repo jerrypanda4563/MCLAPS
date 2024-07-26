@@ -112,7 +112,7 @@ class SurveyModel(BaseModel):
         return v
 
 class AgentParameters(BaseModel):
-    agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview" ]] = "gpt-3.5-turbo"
+    agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-4o", "gpt-4o-mini"]] = "gpt-3.5-turbo"
     agent_temperature: Optional[float] = 1.21
     existance_date: Optional[str] = datetime.date.today().isoformat()
     json_mode: Optional[bool] = True
