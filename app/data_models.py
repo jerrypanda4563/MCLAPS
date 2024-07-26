@@ -4,7 +4,7 @@ import datetime
 
 
 
-open_ai_models = Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview", "text-embedding-3-small", "text-embedding-3-large" ]
+open_ai_models = Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-4o", "gpt-4o-mini", "text-embedding-3-small", "text-embedding-3-large" ]
 
 class DemographicModel(BaseModel):
     sex_at_birth: Optional[str] = None

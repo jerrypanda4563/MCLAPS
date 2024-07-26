@@ -13,6 +13,10 @@ def model_filter(model: str) -> open_ai_models:
         return "gpt-4-turbo"
     if "gpt-4-0125-preview" in model:
         return "gpt-4-turbo"
+    if "gpt-4o" in model:
+        return "gpt-4o"
+    if "gpt-4o-mini" in model:
+        return "gpt-4o-mini"
     if "gpt-4-1106-preview" in model:
         return "gpt-4-turbo"
     if "text-embedding-3-small" in model:
