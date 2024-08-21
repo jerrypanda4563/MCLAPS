@@ -1,8 +1,10 @@
-from app.internal import demgen, response_agent 
+from app.internal import response_agent 
 from typing import Dict, List
 import json
 import openai.error
 import time
+
+from app.redundant import demgen
 
 
 class MaxRetry(Exception):

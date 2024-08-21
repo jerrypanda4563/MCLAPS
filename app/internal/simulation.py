@@ -1,4 +1,4 @@
-from app.internal import response_agent 
+from app.internal.agent_model import response_agent 
 from app.data_models import SurveyModel, DemographicModel, AgentParameters
 import traceback
 from typing import Dict, List

@@ -6,7 +6,7 @@ from pydantic import BaseModel, constr
 from typing import List, Dict, Optional
 import openai
 from app import settings
-from
+
 
 
 openai.api_key = settings.OPEN_AI_KEY

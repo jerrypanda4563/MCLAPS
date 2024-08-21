@@ -1,4 +1,4 @@
-from app.internal import demgen
+from app.redundant import demgen
 from app.redundant import simulation_runner as runner
 from app.redis_config import cache
 import json
