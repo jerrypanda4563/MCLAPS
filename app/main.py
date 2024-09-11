@@ -178,42 +178,56 @@ async def new_simulation(sim_param: SimulationParameters):
 
 
 
-@application.get("/simulations/status")
-async def sim_status(sim_id: str):
-    if test.mongo_connection_test():
-        database = mongo_db.collection_simulations
-        try:
-            simulation_obj: Dict = database.find_one({"_id": sim_id})
-        except Exception as e:
-            raise HTTPException(status_code=404, detail=f"Simulation id {sim_id} doesnt exist {e}")
-        try:
-            queued_tasks: Dict = simulation_obj["Queued Tasks"]
-            task_states = []
-            for task_id in list(queued_tasks.keys()):
-                task = queue.fetch_job(task_id)
-                task_states.append(task.get_status())
+# @application.get("/simulations/status")
+# async def sim_status(sim_id: str):
+#     if test.mongo_connection_test():
+#         database = mongo_db.collection_simulations
+#         try:
+#             simulation_obj: Dict = database.find_one({"_id": sim_id})
+#         except Exception as e:
+#             raise HTTPException(status_code=404, detail=f"Simulation id {sim_id} doesnt exist {e}")
+#         try:
+#             queued_tasks: Dict = simulation_obj["Queued Tasks"]
+#             task_states = []
+#             for task_id in list(queued_tasks.keys()):
+#                 task = queue.fetch_job(task_id)
+#                 task_states.append(task.get_status())
             
-            if all(task == "finished" for task in task_states):
-                database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
-                return {sim_id: f"Completed. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed."}
+#             if all(task == "finished" for task in task_states):
+#                 database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
+#                 return {sim_id: f"Completed. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed."}
             
-            if all(task == "failed" for task in task_states):
-                database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
-                return {sim_id: f"All tasks failed. Completed {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs."}
+#             if all(task == "failed" for task in task_states):
+#                 database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
+#                 return {sim_id: f"All tasks failed. Completed {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs."}
             
 
+#             return {
+#                 sim_id: f"Running. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed.", 
+#                 "Task Status": task_states
+#                 }
+        
+#         except Exception as e:
+#             return {sim_id: f"Run Status: {simulation_obj['Run Status']}. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed.",}
+    
+#     else:
+#         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
+        
+
+
+@application.get("/simulations/status")
+def sim_status(sim_id: str) -> Dict:
+    if test.mongo_connection_test():
+        database = mongo_db.collection_simulations
+        simulation_obj: Dict = database.find_one({"_id": sim_id})
+        if simulation_obj:
             return {
-                sim_id: f"Running. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed.", 
-                "Task Status": task_states
+                "simulation_id": sim_id,
+                "status": simulation_obj["Run Status"],
+                "progress": f"{simulation_obj["Completed Runs"]} out of {simulation_obj["Number of Runs"]} completed",
                 }
-        
-        except Exception as e:
-            return {sim_id: f"Run Status: {simulation_obj['Run Status']}. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed.",}
-    
-    else:
-        raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
-        
-    
+        else:
+            raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
 
 @application.get("/simulations/load_simulation")
 async def load_simulation(sim_id: str) -> Dict:
@@ -226,7 +240,7 @@ async def load_simulation(sim_id: str) -> Dict:
             raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
     else:
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
-        
+    
         
 @application.get("/simulations/load_simulation/csv")
 async def load_simulation_csv(sim_id: str, file_path = "./simulations"):
