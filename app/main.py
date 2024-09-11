@@ -224,7 +224,7 @@ def sim_status(sim_id: str) -> Dict:
             return {
                 "simulation_id": sim_id,
                 "status": simulation_obj["Run Status"],
-                "progress": f"{simulation_obj["Completed Runs"]} out of {simulation_obj["Number of Runs"]} completed",
+                "progress": f" {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} completed",
                 }
         else:
             raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
