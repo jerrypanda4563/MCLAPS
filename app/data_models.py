@@ -141,8 +141,8 @@ class SimulationParameters(BaseModel):
     def check_n_of_runs(cls, v):
         if v is None:
             return 100  
-        if v > cls.MAX_WORKERS:
-            raise ValueError(f"n_of_runs cannot exceed {cls.MAX_WORKERS}")
+        if v > cls.MAX_RUNS:
+            raise ValueError(f"n_of_runs cannot exceed {cls.MAX_RUNS}")
         return v
 
     class Config:
