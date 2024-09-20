@@ -90,4 +90,30 @@ def run_simulation(sim_id: str, survey: Dict, demographic_parameters: Demographi
         return False
 
 
+
+#new function for batching inside running function
+# import rq
+# from app.redis_config import cache
+
+
+# queue = rq.Queue(name = 'sim_requests', connection = cache, default_timeout=7200)
+
+# def run(sim_id: str, survey: Dict, demographic_parameters: DemographicModel, agent_params: AgentParameters, n_of_runs: int,  n_workers: Optional[int]=5) -> bool:
+#     database = mongo_db.collection_simulations
+
+#     batch_size = 250
+#     if n_of_runs > batch_size:
     
+#         n_of_batches = n_of_runs // batch_size
+#         remainder_batch_size = n_of_runs % batch_size
+#         request_batches = [i for i in [batch_size] * n_of_batches + [remainder_batch_size] if i != 0]
+#     else:
+#         request_batches = [n_of_runs]
+
+#     demographic_profiles = []
+#     for i, batch in enumerate(request_batches):
+        
+
+
+
+

@@ -88,7 +88,18 @@ class LinearScaleQuestion(BaseModel):
     min_value: int
     max_value: int
     answer: None
+    @validator('min_value')
+    def check_min_value(cls, v):
+        if v < 0:
+            raise ValueError('min_value cannot be less than 0')
+        return v
 
+    @validator('max_value')
+    def check_max_value(cls, v):
+        if v > 10:
+            raise ValueError('max_value cannot be greater than 10')
+        return v
+    
 class ShortAnswerQuestion(BaseModel):
     type: str = Field("short answer", Literal=True)
     question: str
