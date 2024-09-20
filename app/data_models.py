@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, validator
-from typing import List, Optional, Union, Literal
+from typing import List, Optional, Union, Literal, ClassVar
 import datetime
 
 
@@ -88,7 +88,18 @@ class LinearScaleQuestion(BaseModel):
     min_value: int
     max_value: int
     answer: None
+    @validator('min_value')
+    def check_min_value(cls, v):
+        if v < 0:
+            raise ValueError('min_value cannot be less than 0')
+        return v
 
+    @validator('max_value')
+    def check_max_value(cls, v):
+        if v > 10:
+            raise ValueError('max_value cannot be greater than 10')
+        return v
+    
 class ShortAnswerQuestion(BaseModel):
     type: str = Field("short answer", Literal=True)
     question: str
@@ -125,6 +136,25 @@ class SimulationParameters(BaseModel):
     survey_params: SurveyModel
     agent_params: AgentParameters
     n_of_runs: int
-    workers: Optional[int] = 5
+    workers: Optional[int] = 10
+
+    MAX_WORKERS: ClassVar[int] = 15
+    @validator('workers', pre=True, always=True)
+    def check_max_workers(cls, v):
+        if v is None:
+            return cls.MAX_WORKERS  # Optional: Default to max if None
+        if v > cls.MAX_WORKERS:
+            raise ValueError(f"workers cannot exceed {cls.MAX_WORKERS}")
+        return v
+    
+    MAX_RUNS: ClassVar[int] = 1000
+    @validator('n_of_runs', pre=True, always=True)
+    def check_n_of_runs(cls, v):
+        if v is None:
+            return 100  
+        if v > cls.MAX_RUNS:
+            raise ValueError(f"n_of_runs cannot exceed {cls.MAX_RUNS}")
+        return v
+
     class Config:
         extra="forbid"
