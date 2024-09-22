@@ -122,6 +122,10 @@ class SurveyModel(BaseModel):
             raise ValueError('Invalid question type')
         return v
 
+    class Config:
+        validate_assignment = True  # Enforces validation for nested assignments
+
+
 class AgentParameters(BaseModel):
     agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-4o", "gpt-4o-mini"]] = "gpt-3.5-turbo"
     agent_temperature: Optional[float] = 1.21
@@ -157,4 +161,5 @@ class SimulationParameters(BaseModel):
         return v
 
     class Config:
-        extra="forbid"
+        validate_assignment = True  # Enables recursive validation
+        extra = "forbid"
