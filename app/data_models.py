@@ -85,8 +85,8 @@ class RankingQuestion(BaseModel):
 class LinearScaleQuestion(BaseModel):
     type: str = Field("linear scale", Literal=True)
     question: str
-    min_value: int
-    max_value: int
+    min_value: int = Field(..., strict=True)
+    max_value: int = Field(..., strict=True)
     answer: None
     @validator('min_value')
     def check_min_value(cls, v):
