@@ -28,9 +28,13 @@ class Agent:
     def __init__(self, instruction:str, params: AgentParameters):
         self.lt_memory = agent_data.AgentData()
         self.st_memory: List[str] = []
-        self.st_memory_capacity: int = 4000       ##set as agent parameter definition
         self.instruction:str = instruction
 
+
+        self.st_memory_capacity: int = params.memory_context_length
+        self.max_output_length: int = params.max_output_length
+        self.lt_memory_trigger_length: int = params.lt_memory_trigger_length
+        
         self.llm_model = params.agent_model
         self.temperature = params.agent_temperature
         self.json_mode = params.json_mode
@@ -128,7 +132,7 @@ class Agent:
                             {"role": "user", "content": query},
                         ],
                     temperature=self.temperature,
-                    max_tokens=512,
+                    max_tokens=self.max_output_length,
                     n=1  
                     )
  
@@ -147,7 +151,7 @@ class Agent:
                             {"role": "user", "content": query},
                         ],
                     temperature=self.temperature,
-                    max_tokens=512,
+                    max_tokens=self.max_output_length,
                     n=1  
                     )
             rate_limiter.new_response(completion)
@@ -166,7 +170,7 @@ class Agent:
     
     
     def inject_memory(self, string:str) -> None:
-        if count_tokens(string) > 110:     #set as agent parameter definition
+        if count_tokens(string) > self.lt_memory_trigger_length:     #set as agent parameter definition
             self.lt_memory.add_data_str(string)
         else:
             self.st_memory.append(string)

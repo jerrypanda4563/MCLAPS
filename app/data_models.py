@@ -131,6 +131,9 @@ class AgentParameters(BaseModel):
     agent_temperature: Optional[float] = 1.21
     existance_date: Optional[str] = datetime.date.today().isoformat()
     json_mode: Optional[bool] = True
+    memory_context_length: Optional[int] = 4196
+    max_output_length: Optional[int] = 512
+    lt_memory_trigger_length: Optional[int] = 512
     class Config:
         extra="forbid"
 

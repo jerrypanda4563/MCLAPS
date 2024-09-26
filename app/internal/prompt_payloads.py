@@ -55,6 +55,10 @@ def linear_scale_prompt(question: Dict[str, Any]) -> str:
     question_text: str = question["question"]
     min_value: int = question["min_value"]
     max_value: int = question["max_value"]
+    if min_value < 0:
+        min_value = 0
+    if max_value > 10:
+        max_value = 10
     question_payload = question_text + "\n" + f"Scale: {list(range(min_value, max_value))}" + "\n Your response must be a number on the scale given"
     prompt_payload = question_payload + "\n JSON response schema:\n" + json.dumps(answer_schema)
     return prompt_payload
