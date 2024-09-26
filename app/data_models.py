@@ -142,7 +142,7 @@ class SimulationParameters(BaseModel):
     n_of_runs: int
     workers: Optional[int] = 10
 
-    MAX_WORKERS: ClassVar[int] = 15
+    MAX_WORKERS: ClassVar[int] = 50
     @validator('workers', pre=True, always=True)
     def check_max_workers(cls, v):
         if v is None:
@@ -151,7 +151,7 @@ class SimulationParameters(BaseModel):
             raise ValueError(f"workers cannot exceed {cls.MAX_WORKERS}")
         return v
     
-    MAX_RUNS: ClassVar[int] = 1000
+    MAX_RUNS: ClassVar[int] = 10000
     @validator('n_of_runs', pre=True, always=True)
     def check_n_of_runs(cls, v):
         if v is None:
