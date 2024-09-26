@@ -20,7 +20,7 @@ class Simulator():
     #unwraps agent parameters and performs initialization of agent 
     def __init__(self, survey: Dict, demographic: Dict, agent_params: AgentParameters):
         self.survey_responses: List[Dict] = []
-        self.survey_context: str = survey["description"]
+        self.survey_context: list[str] = survey["context"]
         self.survey_questions: List[Dict] = survey["questions"]
         self.demographic: Dict = demographic["demographic"]
         self.persona: Dict = demographic["persona"]
@@ -37,15 +37,12 @@ class Simulator():
     
         retries = 3
 
-        survey_context: str = self.survey_context
+        survey_context: list[str] = self.survey_context
        
-
-
-        self.simulator.inject_memory(survey_context)
-        # for k, v in self.demographic.items():
-        #     self.simulator.inject_memory(f"{k}: {v}")
-        
-
+        for context in survey_context:
+            self.simulator.inject_memory(context)
+  
+    
         #iterating through world state
         survey_questions: List[Dict] = self.survey_questions
         for question in survey_questions:

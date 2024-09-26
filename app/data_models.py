@@ -113,7 +113,7 @@ class LongAnswerQuestion(BaseModel):
 
 class SurveyModel(BaseModel):
     name: str
-    description: Optional[str] = None
+    context: Optional[list[str]] = None
     questions: List[Union[MultipleChoiceQuestion, CheckboxesQuestion, LinearScaleQuestion, RankingQuestion, ShortAnswerQuestion, LongAnswerQuestion]]
 
     @validator('questions', each_item=True)
