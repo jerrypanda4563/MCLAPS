@@ -85,8 +85,8 @@ class RankingQuestion(BaseModel):
 class LinearScaleQuestion(BaseModel):
     type: str = Field("linear scale", Literal=True)
     question: str
-    min_value: int
-    max_value: int
+    min_value: int = Field(..., strict=True)
+    max_value: int = Field(..., strict=True)
     answer: None
     @validator('min_value')
     def check_min_value(cls, v):
@@ -121,6 +121,10 @@ class SurveyModel(BaseModel):
         if v.type not in ["short answer", "long answer", "multiple choice", "checkboxes", "ranking", "linear scale"]:
             raise ValueError('Invalid question type')
         return v
+
+    class Config:
+        validate_assignment = True  # Enforces validation for nested assignments
+
 
 class AgentParameters(BaseModel):
     agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-4o", "gpt-4o-mini"]] = "gpt-3.5-turbo"
@@ -157,4 +161,5 @@ class SimulationParameters(BaseModel):
         return v
 
     class Config:
-        extra="forbid"
+        validate_assignment = True  # Enables recursive validation
+        extra = "forbid"

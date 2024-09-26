@@ -28,7 +28,7 @@ class Agent:
     def __init__(self, instruction:str, params: AgentParameters):
         self.lt_memory = agent_data.AgentData()
         self.st_memory: List[str] = []
-        self.st_memory_capacity: int = 4000
+        self.st_memory_capacity: int = 4000       ##set as agent parameter definition
         self.instruction:str = instruction
 
         self.llm_model = params.agent_model
@@ -164,8 +164,9 @@ class Agent:
             self.restructure_memory(query)
         return response
     
+    
     def inject_memory(self, string:str) -> None:
-        if count_tokens(string) > 110:
+        if count_tokens(string) > 110:     #set as agent parameter definition
             self.lt_memory.add_data_str(string)
         else:
             self.st_memory.append(string)
