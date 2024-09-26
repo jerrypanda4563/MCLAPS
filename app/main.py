@@ -97,11 +97,6 @@ async def clear_tasks():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
 
-@application.post("/debug")
-async def debug(sim_param: SimulationParameters):
-    return sim_param.dict()
-
-
 @application.post("/simulations/new_simulation")
 async def new_simulation(sim_param: SimulationParameters):
     
@@ -157,7 +152,7 @@ async def new_simulation(sim_param: SimulationParameters):
             "_id":sim_id,
             "Queued Tasks": tasks_queued,
             "Survey Name": survey_params.name,
-            "Survey Description": survey_params.description,
+            "Survey Description": survey_params.context,
             "Survey Questions": [json.loads(question.json()) for question in survey_params.questions],
             "Target Demographic": json.loads(demographic_params.json()),
             "Number of Runs": n_of_runs,
