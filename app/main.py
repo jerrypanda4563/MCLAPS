@@ -89,11 +89,26 @@ async def all_tasks():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching tasks: {e}")
 
-@application.get("/simulations/clear_tasks")
-async def clear_tasks():
+from rq.job import Job
+@application.get("/simulations/kill_all")
+async def kill_all():
+    try:
+        job_ids = queue.job_ids  # Retrieve all job IDs in the queue
+        for job_id in job_ids:
+            job = Job.fetch(job_id, connection=queue)
+            job.cancel()  # Cancel the job
+
+        # Optionally: You could also empty the queue after canceling all jobs
+        queue.empty()
+        return {"message": "All tasks killed."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
+
+@application.get("/simulations/clear queue")
+async def kill_all():
     try:
         queue.empty()
-        return {"message": "All tasks cleared."}
+        return {"message": "Queue cleared."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
 
