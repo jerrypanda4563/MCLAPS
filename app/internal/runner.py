@@ -19,7 +19,7 @@ import time
 demgen = MclapsDemgenClient()
 
 
-def run_simulation(sim_id: str, survey: Dict, demographic_parameters: DemographicModel, agent_params: AgentParameters, n_of_runs: int,  n_workers: Optional[int]=5) -> bool:
+def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, demographic_parameters: DemographicModel, agent_params: AgentParameters, n_of_runs: int, n_workers: Optional[int]=5) -> bool:
     
     database = mongo_db.collection_simulations
 
@@ -28,21 +28,21 @@ def run_simulation(sim_id: str, survey: Dict, demographic_parameters: Demographi
     # rate_limiter = mclapsrlClient()
     # rate_limiter.create_counter(agent_model)
 
-    demographic_profiles = None
-    try:
-        demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sim_id = sim_id, sampling_conditions=demographic_parameters))
-    except Exception as e:
-        print(f"Demgen request failed: {e}")
-        traceback.print_exc()
-        return False
+    # demographic_profiles = None
+    # try:
+    #     demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sim_id = sim_id, sampling_conditions=demographic_parameters))
+    # except Exception as e:
+    #     print(f"Demgen request failed: {e}")
+    #     traceback.print_exc()
+    #     return False
     
-    task_ids = demgen_task["task_ids"] #list of task ids
-    dataset_id = demgen_task["dataset_id"]
+    # task_ids = demgen_task["task_ids"] #list of task ids
+
     task_states = False
     while task_states is False:
-        task_states = demgen.get_task_status(task_ids)
+        task_states = demgen.get_task_status(demgen_task_id)
         if task_states == True:
-            demographic_profiles = demgen.get_task_results(task_ids)
+            demographic_profiles = demgen.get_task_results(demgen_task_id)
             print("Demographic profiles received.")
         elif task_states == False:
             print("Demgen in progress.")
@@ -56,7 +56,7 @@ def run_simulation(sim_id: str, survey: Dict, demographic_parameters: Demographi
     n_of_completed_runs = 0
 
     try:
-        with ProcessPoolExecutor(max_workers=n_workers) as executor:
+        with ProcessPoolExecutor(max_workers = n_workers) as executor:
             future_to_simulation = {executor.submit(sim.simulate): sim for sim in simulation_instances}
             for future in as_completed(future_to_simulation):
                 n_of_completed_runs += 1

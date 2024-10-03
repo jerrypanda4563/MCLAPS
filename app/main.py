@@ -22,7 +22,7 @@ import uuid
 from app.api_clients.mclaps_demgen import MclapsDemgenClient
 
 import logging
-
+import traceback
 
 
 
@@ -104,19 +104,20 @@ async def kill_all():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
 
-@application.get("/simulations/clear queue")
-async def kill_all():
+@application.get("/simulations/clear_queue")
+async def clear_queue():
     try:
         queue.empty()
         return {"message": "Queue cleared."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
 
+from app.api_clients.mclaps_demgen import MclapsDemgenClient, DemgenRequest
 @application.post("/simulations/new_simulation")
 async def new_simulation(sim_param: SimulationParameters):
     
     #unwraps simulation parameters
-
+    
     if test.mongo_connection_test():
         print("MongoDB connection successful.")
 
@@ -129,32 +130,53 @@ async def new_simulation(sim_param: SimulationParameters):
         
         survey_object: dict = survey_params.dict()
 
+
+        #############send demgen request here
+        demgen = MclapsDemgenClient()
+        try:
+            demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sim_id = sim_id, sampling_conditions = demographic_params))
+        except Exception as e:
+            print(f"Demgen request failed: {e}")
+            traceback.print_exc()
+            return False
+        
+        task_ids = demgen_task["task_ids"] #list of task ids for each batch
+
+
+        ####################
+
         #batching the simulation runs
         batch_size = 250
         if n_of_runs > batch_size:
         
             n_of_batches = n_of_runs // batch_size
             remainder_batch_size = n_of_runs % batch_size
-            request_batches = [i for i in [batch_size] * n_of_batches + [remainder_batch_size] if i != 0]
-        
+            request_batch_sizes = [i for i in [batch_size] * n_of_batches + [remainder_batch_size] if i != 0]
+            request_batches = []
+            for batch, demgen_task_id in zip(request_batch_sizes, task_ids):
+                request_batch = [tuple[batch, demgen_task_id]]
+                request_batches.append(request_batch)
         else:
-            request_batches = [n_of_runs]
+            request_batches = [tuple[n_of_runs, task_ids[0]]]
 
         try:
 
             tasks = [queue.enqueue(
                 runner.run_simulation, 
-                args = (sim_id, survey_object, demographic_params, agent_params, batch_sample_size, n_of_workers), 
+                args = (sim_id, demgen_task_id, survey_object, demographic_params, agent_params, batch_sample_size, n_of_workers), 
                 retry = rq.Retry(max=3, interval = 10), 
                 results_ttl = 7200, 
                 timeout = 7200) 
-                for batch_sample_size in request_batches]
+                for batch_sample_size, demgen_task_id in request_batches]
             
+        ####################
+
         except Exception as e:
             raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.') 
         
-        queued_jobs = queue.get_job_ids()
 
+        
+        queued_jobs = queue.get_job_ids()
         # Fetch started jobs, get queue positions of tasks
         started_registry = rq.registry.StartedJobRegistry(queue=queue)
         started_job_ids = started_registry.get_job_ids()
