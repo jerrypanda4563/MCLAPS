@@ -144,21 +144,25 @@ class Agent:
     
 
     def construct_st_memory(self, query:str) -> None:
-        random_memory = self.random_memory()
+        if random.random() < self.agent_temperature:
+            random_memory = self.random_memory()
+        else:
+            random_memory = []
+        
         current_memory = self.st_memory.copy()
-        trigger_value = random.random()
-
         if len(self.st_memory) == 0:
             queried_memory = self.lt_memory.query(query)
             self.st_memory =current_memory + queried_memory + random_memory
         else:
-            if trigger_value > self.agent_temperature/2:
+            #1-agent_temp/2 chance of querying memory
+            if random.random() > self.agent_temperature/2:
                 with ThreadPoolExecutor(max_workers=len(self.st_memory)) as executor:
                     similarity_scores = list(executor.map(lambda x: self.evaluator(query, x), self.st_memory))
                 k = np.average(similarity_scores) #mean similarity to query
                 queried_memory = self.lt_memory.query(query, evaluator_k=k)
                 self.st_memory = current_memory + queried_memory + random_memory
             else: 
+                #generates random memory along with
                 self.st_memory = current_memory + random_memory
 
         if self.st_memory_length() > self.st_memory_capacity:
