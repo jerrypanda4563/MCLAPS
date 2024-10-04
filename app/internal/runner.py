@@ -23,7 +23,7 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, demographic_p
     
     database = mongo_db.collection_simulations
 
-
+    demgen_client = MclapsDemgenClient()
     # #manual counter creation in runner process for initial demgen thread
     # rate_limiter = mclapsrlClient()
     # rate_limiter.create_counter(agent_model)
@@ -37,23 +37,40 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, demographic_p
     #     return False
     
     # task_ids = demgen_task["task_ids"] #list of task ids
-
-    task_states = False
-    while task_states is False:
-        task_states = demgen.get_task_status(demgen_task_id)
-        if task_states == True:
-            demographic_profiles = demgen.get_task_results(demgen_task_id)
-            print("Demographic profiles received.")
-        elif task_states == False:
-            print("Demgen in progress.")
-            time.sleep(5)
-        else:
-            print("Demgen task failed, ending simulation.")
-            return False
-
-    simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
-    print("simulation instances created")
-    n_of_completed_runs = 0
+    try:
+        task_states = False
+        while task_states is False:
+            task_states = demgen.get_task_status([demgen_task_id])
+            if task_states == True:
+                demographic_profiles = demgen.get_task_results(demgen_task_id)
+                print("Demographic profiles received.")
+            elif task_states == False:
+                print("Demgen in progress.")
+                time.sleep(5)
+            else:
+                print("Demgen task failed, ending simulation.")
+                return False
+    except Exception as e:
+        print(f"Demgen task error: {e}")
+        #add function to delete the demgen task in demgen
+        # demgen_client.delete_task(demgen_task_id)
+        traceback.print_exc()
+        query = {"_id": sim_id}
+        run_status = False
+        database.update_one(query, {"$set":{"Run Status": run_status}})
+        return False
+    
+    try:
+        simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
+        print("simulation instances created")
+        n_of_completed_runs = 0
+    except Exception as e:
+        print(f"Error creating simulation instances: {e}")
+        traceback.print_exc()
+        query = {"_id": sim_id}
+        run_status = False
+        database.update_one(query, {"$set":{"Run Status": run_status}})
+        return False
 
     try:
         with ProcessPoolExecutor(max_workers = n_workers) as executor:

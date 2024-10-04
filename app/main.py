@@ -172,7 +172,9 @@ async def new_simulation(sim_param: SimulationParameters):
         ####################
 
         except Exception as e:
+            traceback.print_exc()
             raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.') 
+            
         
 
         
@@ -208,6 +210,7 @@ async def new_simulation(sim_param: SimulationParameters):
 
         return {"task_id": [task.id for task in tasks], "simulation_id": sim_id, "queue_position": queue_positions} 
     else:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
 
 
