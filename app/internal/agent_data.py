@@ -164,16 +164,16 @@ class AgentData:
     #quick check to see if there is anything more related in database
     def L0_query(self, query_string:str) -> Optional[List[int]]:
         if len(self.DataChunks) == 0:
-            pass
+            return [0]
         else:
             try:
                 query_embedding = self.embed_large_text(query_string)
                 query_conjugate_vector = self.compute_conjugate_vector(query_embedding)
-                top_5: List[int] = sorted(query_conjugate_vector.tolist(),reverse=True)[0:5]
-                return top_5
+                top_1: List[int] = sorted(query_conjugate_vector.tolist(),reverse=True)[0:1]
+                return top_1
             except Exception as e:
                 print(f"Error in L0 query: {e}")
-                return None
+                return [0]
             
     #returns 5 strings, each string has six chunks 6 chunks, each chunk 20 tokens
     def fast_query(self, query_string: str) -> list[str]:
@@ -266,20 +266,19 @@ class AgentData:
             self.DataStrings.append(data_str)
             self.resturcture_memory()
             
-        
         except Exception as e:
             print(f"Error in adding data string: {e}")
-            return None
+        
         
     def query(self, input_string: str, evalutator_k: Optional[float] = 0):
         if len(self.DataChunks) == 0:
-            return None
+            return []
         else:
             relatedness = self.L0_query(input_string)[0]
             if relatedness >= evalutator_k:
                 return self.fast_query(input_string)
             else:
-                return None
+                return []
 
         
     
