@@ -46,6 +46,7 @@ class Agent:
         
         self.st_memory: list[str] = []
         self.instruction:str = instruction
+        self.lt_memory_chunk_size = round(params.chunk_size/(params.reconstruction_top_n + 1))
 
        
 
@@ -130,13 +131,15 @@ class Agent:
         if trigger_value < self.agent_temperature:
             return []
         else:
-            if len(self.lt_memory.DataStrings) == 0:
+            if len(self.lt_memory.DataChunks) == 0:
                 return []
 
             else:
-                sampled_datastr = random.choice(self.lt_memory.DataStrings)
-                memory_chunks = sampled_datastr.chunks
-                return [chunk.string for chunk in memory_chunks]
+                sampled_chunk = random.choice(self.lt_memory.DataChunks)
+                related_chunk_indices = sorted(enumerate(sampled_chunk.conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:round(self.memory_chunk_size/self.lt_memory_chunk_size)]
+                related_strings = [self.lt_memory.DataChunks[index].string for index, _ in related_chunk_indices]
+                memory_chunks = related_strings.extend([sampled_chunk.string])
+                return memory_chunks
         
     ###################
 

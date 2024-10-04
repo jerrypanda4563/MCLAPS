@@ -185,7 +185,7 @@ class AgentData:
             return string_group
         
         if len(self.DataChunks) == 0:
-            return None
+            return []
         
         else:
             try:
@@ -203,13 +203,12 @@ class AgentData:
                 
             except Exception as e:
                 print(f"Error in fast query: {e}")
-                return None
+                return []
 
     def resturcture_memory(self):
         if len(self.DataChunks) >= self.memory_size: 
             chunk_average_similarities = [np.mean(chunk.conjugate_vector) for chunk in self.DataChunks]
             least_relevant_chunk_indices = sorted(enumerate(chunk_average_similarities), key=lambda x: x[1])[0:round(self.loss_factor * len(self.DataChunks))]
-            least_relevant_chunk_indices = sorted(least_relevant_chunk_indices, reverse=True)
             for index in least_relevant_chunk_indices:
                 del self.DataChunks[index]
             # delete chunks and update conjugate vectors
