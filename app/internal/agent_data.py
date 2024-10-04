@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Literal
 import pydantic
 import uuid
 import random
+import traceback
 import spacy
 from concurrent.futures import ThreadPoolExecutor
 from app.api_clients.mclapsrl import mclapsrlClient
@@ -140,9 +141,14 @@ class AgentData:
                 return embedding
             except (openai.error.OpenAIError, openai.error.Timeout, openai.error.ServiceUnavailableError, openai.error.RateLimitError) as e:
                 print(f"Error while embedding in agent data: {e}")
+                traceback.print_exc()
                 retries -= 1
                 time.sleep(5)
                 continue
+        else: 
+            print(f"Failed to embed text: {text}")
+            traceback.print_exc()
+            return np.zeros(self.dimension) 
         
     def isotropic_rescaler(self, value: float) -> float:
         rescaled_value = (value + 1)/2
@@ -206,17 +212,21 @@ class AgentData:
                 return []
 
     def resturcture_memory(self):
-        if len(self.DataChunks) >= self.memory_size: 
-            chunk_average_similarities = [np.mean(chunk.conjugate_vector) for chunk in self.DataChunks]
-            least_relevant_chunk_indices = sorted(enumerate(chunk_average_similarities), key=lambda x: x[1])[0:round(self.loss_factor * len(self.DataChunks))]
-            for index in least_relevant_chunk_indices:
-                del self.DataChunks[index]
-            # delete chunks and update conjugate vectors
-            for chunk in self.DataChunks:
-                chunk.conjugate_vector = np.delete(chunk.conjugate_vector, least_relevant_chunk_indices)
-                chunk.index = self.DataChunks.index(chunk)
-        else:
-            pass
+        try:
+            if len(self.DataChunks) >= self.memory_size: 
+                chunk_average_similarities = [np.mean(chunk.conjugate_vector) for chunk in self.DataChunks]
+                least_relevant_chunk_indices = sorted(enumerate(chunk_average_similarities), key=lambda x: x[1])[0:round(self.loss_factor * len(self.DataChunks))]
+                for index in least_relevant_chunk_indices:
+                    del self.DataChunks[index]
+                # delete chunks and update conjugate vectors
+                for chunk in self.DataChunks:
+                    chunk.conjugate_vector = np.delete(chunk.conjugate_vector, least_relevant_chunk_indices)
+                    chunk.index = self.DataChunks.index(chunk)
+            else:
+                pass
+        except Exception as e:
+            traceback.print_exc()
+            raise Exception(f"Error in restructuring memory in agent_data: {e}")
 
 
     ####add in logic for deleting old chunks, restruturing existing chunks and restructuring of relational matrix once max chunk size is hit
@@ -272,6 +282,8 @@ class AgentData:
             
         except Exception as e:
             print(f"Error in adding string to agent data: {e}")
+            traceback.print_exc()
+            raise Exception(f"Error in add_str in agent_data: {e}")
         
         
     def query(self, input_string: str, evalutator_k: Optional[float] = 0):
