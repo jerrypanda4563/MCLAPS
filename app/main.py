@@ -154,10 +154,10 @@ async def new_simulation(sim_param: SimulationParameters):
             request_batch_sizes = [i for i in [batch_size] * n_of_batches + [remainder_batch_size] if i != 0]
             request_batches = []
             for batch, demgen_task_id in zip(request_batch_sizes, task_ids):
-                request_batch = [tuple[batch, demgen_task_id]]
+                request_batch = (batch, demgen_task_id)
                 request_batches.append(request_batch)
         else:
-            request_batches = [tuple[n_of_runs, task_ids[0]]]
+            request_batches = [(n_of_runs, task_ids[0])]
 
         try:
 
