@@ -58,7 +58,7 @@ class Agent:
 
         self.llm_model = params.agent_model
         self.embedding_model = params.embedding_model
-        self.model_temperature = params.model_temperature
+        self.model_temperature = params.llm_temperature
         self.agent_temperature = params.agent_temperature    # for query randomness
         self.json_mode = params.json_mode
         self.existence_date = params.existance_date
