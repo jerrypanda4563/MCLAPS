@@ -41,7 +41,7 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, demographic_p
         while task_states is False:
             task_states = demgen.get_task_status(list(demgen_task_id))
             if task_states == True:
-                demographic_profiles = demgen.get_task_results(demgen_task_id)
+                demographic_profiles = demgen.get_task_results(list(demgen_task_id))
                 print("Demographic profiles received.")
             elif task_states == False:
                 print("Demgen in progress.")
@@ -82,7 +82,7 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, demographic_p
                 query = {"_id": sim_id}
                 database.update_one(query, {"$push":{"Simulation Result": result}})
                 database.update_one(query, {"$inc":{"Completed Runs": 1}})
-                print(f"Completed {n_of_completed_runs} of {n_of_runs} runs, responses are {answers}.")
+                print(f"Completed {n_of_completed_runs} of {n_of_runs} runs.")
                 if n_of_completed_runs == n_of_runs:
                     query = {"_id": sim_id}
                     runs_total = database.find_one(query, "Number of Runs")
