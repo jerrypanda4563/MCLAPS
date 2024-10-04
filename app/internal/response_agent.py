@@ -143,7 +143,7 @@ class Agent:
 
     
 
-    def construct_st_memory(self, query:str) -> None:
+    def construct_st_memory(self, query_str: str) -> None:
         if random.random() < self.agent_temperature:
             random_memory = self.random_memory()
         else:
@@ -151,22 +151,22 @@ class Agent:
         
         current_memory = self.st_memory.copy()
         if len(self.st_memory) == 0:
-            queried_memory = self.lt_memory.query(query)
+            queried_memory = self.lt_memory.query(query_str)
             self.st_memory =current_memory + queried_memory + random_memory
         else:
             #1-agent_temp/2 chance of querying memory
             if random.random() > self.agent_temperature/2:
                 with ThreadPoolExecutor(max_workers=len(self.st_memory)) as executor:
-                    similarity_scores = list(executor.map(lambda x: self.evaluator(query, x), self.st_memory))
+                    similarity_scores = list(executor.map(lambda x: self.evaluator(query_str, x), self.st_memory))
                 k = np.average(similarity_scores) #mean similarity to query
-                queried_memory = self.lt_memory.query(query, evaluator_k=k)
+                queried_memory = self.lt_memory.query(query_str, k)
                 self.st_memory = current_memory + queried_memory + random_memory
             else: 
                 #generates random memory along with
                 self.st_memory = current_memory + random_memory
 
         if self.st_memory_length() > self.st_memory_capacity:
-            self.restructure_memory(string = query)
+            self.restructure_memory(string = query_str)
     
     
     #pop out strings with lowest similarity to query and add popped memory to lt_memory
