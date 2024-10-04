@@ -20,17 +20,17 @@ demgen = MclapsDemgenClient()
 
 
 def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params: AgentParameters, n_of_runs: int, n_workers: Optional[int]=5) -> bool:
-    
+    print(f"Starting simulation {sim_id}")   ####
     database = mongo_db.collection_simulations
     task_states = False
     demographic_profiles = None
     
     while task_states is False:
-        print(f"Checking demgen task status for {demgen_task_id}")
+        print(f"Checking demgen task status for {demgen_task_id}")####
         try:
             task_states = demgen.get_task_status(list([demgen_task_id]))
             if task_states == True:
-                print("Demgen task completed.")
+                print("Demgen task completed.")#####
                 demographic_profiles = demgen.get_task_results(list([demgen_task_id]))
                 print(f"{demographic_profiles}")
                 print("Demographic profiles received.")
@@ -50,14 +50,13 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
             database.update_one(query, {"$set":{"Run Status": run_status}})
             return False
 
-    print(demographic_profiles)
 
-    print(f"Demgen task completed. Creating simulation instances")
+    print(f"Demgen task completed. Creating simulation instances")#####
     simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
     print("simulation instances created")
     n_of_completed_runs = 0
 
-    print(f"Starting simulation instances for {sim_id}")
+    print(f"Starting simulation instances for {sim_id}")######
     try:
         with ProcessPoolExecutor(max_workers = n_workers) as executor:
             future_to_simulation = {executor.submit(sim.simulate): sim for sim in simulation_instances}

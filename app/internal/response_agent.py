@@ -31,7 +31,9 @@ rate_limiter = mclapsrlClient()
 class Agent:
 
     def __init__(self, instruction:str, params: AgentParameters):
-
+        ######
+        # self.agent_id = str(uuid.uuid4()) #unique id for agent
+        ######
         self.lt_memory = agent_data.AgentData(
             memory_limit = params.memory_limit, 
             chunk_size = round(params.chunk_size/(params.reconstruction_top_n + 1)), 
@@ -45,9 +47,7 @@ class Agent:
         self.st_memory: list[str] = []
         self.instruction:str = instruction
 
-        ######
-        self.agent_id = str(uuid.uuid4()) #unique id for agent
-        ######
+       
 
         self.st_memory_capacity: int = params.memory_context_length
         self.max_output_length: int = params.max_output_length

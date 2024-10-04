@@ -89,7 +89,6 @@ class DataStr(pydantic.BaseModel):
 class AgentData:
     #max_memory_size as a initialization param
     def __init__(self, 
-                 agent_id: str, 
                  memory_limit: int, 
                  chunk_size: int, 
                  sampling_top_n: int, 
@@ -101,7 +100,6 @@ class AgentData:
         
         self.DataStrings: List[DataStr] = []  
         self.DataChunks: List[Chunk] = [] 
-        self.agent_id: str = agent_id
         self.embedding_model: str = embedding_model 
 
 
