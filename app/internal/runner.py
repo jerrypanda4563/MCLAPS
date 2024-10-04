@@ -46,19 +46,12 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
             run_status = False
             database.update_one(query, {"$set":{"Run Status": run_status}})
             return False
-    
-    try:
-        simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
-        print("simulation instances created")
-        n_of_completed_runs = 0
 
-    except Exception as e:
-        print(f"Error creating simulation instances: {e}")
-        traceback.print_exc()
-        query = {"_id": sim_id}
-        run_status = False
-        database.update_one(query, {"$set":{"Run Status": run_status}})
-        return False
+    simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
+    print("simulation instances created")
+    n_of_completed_runs = 0
+
+
 
     try:
         with ProcessPoolExecutor(max_workers = n_workers) as executor:
