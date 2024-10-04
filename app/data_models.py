@@ -133,7 +133,7 @@ class AgentParameters(BaseModel):
 
     agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-4o", "gpt-4o-mini"]] = "gpt-3.5-turbo"
     embedding_model: Optional[Literal["text-embedding-3-small", "text-embedding-3-large"]] = "text-embedding-3-small"
-    model_temperature: Optional[float] = 1.21  #for the llm temp
+    llm_temperature: Optional[float] = 1.21  #for the llm temp
     agent_temperature: Optional[float] = 0.1   #between 0 and 1, if 1 means that the agent is erratic and nuts
     existance_date: Optional[str] = datetime.date.today().isoformat()
     json_mode: Optional[bool] = True

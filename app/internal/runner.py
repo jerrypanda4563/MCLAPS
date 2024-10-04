@@ -23,7 +23,6 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, demographic_p
     
     database = mongo_db.collection_simulations
 
-    demgen_client = MclapsDemgenClient()
     # #manual counter creation in runner process for initial demgen thread
     # rate_limiter = mclapsrlClient()
     # rate_limiter.create_counter(agent_model)
@@ -40,7 +39,7 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, demographic_p
     try:
         task_states = False
         while task_states is False:
-            task_states = demgen.get_task_status([demgen_task_id])
+            task_states = demgen.get_task_status(list(demgen_task_id))
             if task_states == True:
                 demographic_profiles = demgen.get_task_results(demgen_task_id)
                 print("Demographic profiles received.")
