@@ -35,9 +35,9 @@ openai.api_key = settings.OPEN_AI_KEY
 
 
 class Chunk(pydantic.BaseModel):
-    parent_DataStr_id: uuid.UUID
+    # parent_DataStr_id: uuid.UUID
     index: int 
-    DataStr_index: int 
+    # DataStr_index: int 
     string: str 
     embedding_vector: np.ndarray 
     conjugate_vector: Optional[np.ndarray] = np.array([]) 
@@ -63,26 +63,26 @@ class Chunk(pydantic.BaseModel):
         rescaled_conjugate_vector = np.array([isotropic_rescaler(value) for value in conjugate_vector])
         return rescaled_conjugate_vector
 
-#####################
-class DataStr(pydantic.BaseModel):
-    DataStr_id: uuid.UUID
-    index: int
-    string: str
-    chunks: List[Chunk]
-    embedding_vector: np.ndarray
+# #####################
+# class DataStr(pydantic.BaseModel):
+#     DataStr_id: uuid.UUID
+#     index: int
+#     string: str
+#     chunks: List[Chunk]
+#     embedding_vector: np.ndarray
 
-    class Config:
-        arbitrary_types_allowed = True
+#     class Config:
+#         arbitrary_types_allowed = True
 
-    @pydantic.validator('embedding_vector')
-    def check_numpy_array(cls, v):
-        assert isinstance(v, np.ndarray), 'must be a numpy array'
-        return v
+#     @pydantic.validator('embedding_vector')
+#     def check_numpy_array(cls, v):
+#         assert isinstance(v, np.ndarray), 'must be a numpy array'
+#         return v
 
-    @pydantic.validator('DataStr_id')
-    def check_uuid(cls, v):
-        assert isinstance(v, uuid.UUID), 'must be a UUID'
-        return v
+#     @pydantic.validator('DataStr_id')
+#     def check_uuid(cls, v):
+#         assert isinstance(v, uuid.UUID), 'must be a UUID'
+#         return v
     
 
 
@@ -98,7 +98,7 @@ class AgentData:
                  embedding_dim: Optional[int] = 512,
                  embedding_model: Literal["text-embedding-3-small", "text-embedding-3-large"] = "text-embedding-3-small"):  
         
-        self.DataStrings: List[DataStr] = []  
+        # self.DataStrings: List[DataStr] = []  
         self.DataChunks: List[Chunk] = [] 
         self.embedding_model: str = embedding_model 
 
@@ -223,12 +223,10 @@ class AgentData:
     ####add in logic for deleting old chunks, restruturing existing chunks and restructuring of relational matrix once max chunk size is hit
     def add_data_str(self, input_string: str):
 
-        def add_chunk(datastr_index: int, parent_str_id: str, input_string: str, input_string_embedding: np.ndarray) -> Chunk:
+        def add_chunk(input_string: str, input_string_embedding: np.ndarray) -> Chunk:
         
             chunk = Chunk(
-                parent_DataStr_id = parent_str_id,
                 index=len(self.DataChunks),
-                DataStr_index = datastr_index,
                 string=input_string,
                 embedding_vector=input_string_embedding
             )
@@ -240,34 +238,41 @@ class AgentData:
         
         
         try:
-            datastr = input_string
-            datastr_embedding = self.embed_large_text(input_string)
-            datastr_uuid = uuid.uuid4()
-            datastr_chunked = chunking.chunk_string(input_string, chunk_size = self.chunk_size)
+            # datastr = input_string
+            # datastr_embedding = self.embed_large_text(input_string)
+            # datastr_uuid = uuid.uuid4()
+            # datastr_chunked = chunking.chunk_string(input_string, chunk_size = self.chunk_size)
             
-            
-            list_of_chunk_embeddings: List[np.ndarray] = []
-            with ThreadPoolExecutor(max_workers=len(datastr_chunked)) as executor:
-                list_of_chunk_embeddings = list(executor.map(self.embed_large_text, datastr_chunked))
+            # list_of_chunk_embeddings: List[np.ndarray] = []
+            # with ThreadPoolExecutor(max_workers=len(datastr_chunked)) as executor:
+            #     list_of_chunk_embeddings = list(executor.map(self.embed_large_text, datastr_chunked))
 
-
-            list_of_chunks: List[Chunk] = []    
-            for string, embedding in zip(datastr_chunked, list_of_chunk_embeddings):
-                data_chunk = add_chunk(datastr_index= len(list_of_chunks) , parent_str_id = datastr_uuid, input_string = string, input_string_embedding = embedding)
-                list_of_chunks.append(data_chunk)
+            # list_of_chunks: List[Chunk] = []    
+            # for string, embedding in zip(datastr_chunked, list_of_chunk_embeddings):
+            #     data_chunk = add_chunk(datastr_index= len(list_of_chunks) , parent_str_id = datastr_uuid, input_string = string, input_string_embedding = embedding)
+            #     list_of_chunks.append(data_chunk)
             
-            data_str = DataStr(
-                DataStr_id = datastr_uuid,
-                index = len(self.DataStrings),
-                chunks = list_of_chunks,
-                string = datastr,
-                embedding_vector = datastr_embedding
-            )
-            self.DataStrings.append(data_str)
+            # data_str = DataStr(
+            #     DataStr_id = datastr_uuid,
+            #     index = len(self.DataStrings),
+            #     chunks = list_of_chunks,
+            #     string = datastr,
+            #     embedding_vector = datastr_embedding
+            # )
+            # self.DataStrings.append(data_str)
+
+            list_of_chunked_str: List[str] = chunking.chunk_string(input_string, chunk_size = self.chunk_size)
+            with ThreadPoolExecutor(max_workers=len(list_of_chunked_str)) as executor:
+                list_of_chunk_embeddings: List[np.ndarray] = list(executor.map(self.embed_large_text, list_of_chunked_str))
+
+            for string, embedding in zip(list_of_chunked_str, list_of_chunk_embeddings):
+                new_chunk = add_chunk(string, embedding)
+                self.DataChunks.append(new_chunk)
+
             self.resturcture_memory()
             
         except Exception as e:
-            print(f"Error in adding data string: {e}")
+            print(f"Error in adding string to agent data: {e}")
         
         
     def query(self, input_string: str, evalutator_k: Optional[float] = 0):
