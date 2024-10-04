@@ -140,11 +140,10 @@ async def new_simulation(sim_param: SimulationParameters):
             traceback.print_exc()
             return False
         
-        task_ids = demgen_task["task_ids"] #list of task ids for each batch
+        demgen_task_ids = demgen_task["task_ids"] #list of task ids for each batch
 
 
         ####################
-
         #batching the simulation runs
         batch_size = 250
         if n_of_runs > batch_size:
@@ -153,21 +152,22 @@ async def new_simulation(sim_param: SimulationParameters):
             remainder_batch_size = n_of_runs % batch_size
             request_batch_sizes = [i for i in [batch_size] * n_of_batches + [remainder_batch_size] if i != 0]
             request_batches = []
-            for batch, demgen_task_id in zip(request_batch_sizes, task_ids):
+            for batch, demgen_task_id in zip(request_batch_sizes, demgen_task_ids):
                 request_batch = (batch, demgen_task_id)
                 request_batches.append(request_batch)
         else:
-            request_batches = [(n_of_runs, task_ids[0])]
+            request_batches = [(n_of_runs, demgen_task_ids[0])]
+
 
         try:
-
             tasks = [queue.enqueue(
                 runner.run_simulation, 
-                args = (sim_id, demgen_task_id, survey_object, demographic_params, agent_params, batch_sample_size, n_of_workers), 
+                args = (sim_id, demgen_task_id, survey_object, agent_params, batch_sample_size, n_of_workers), 
                 retry = rq.Retry(max=3, interval = 10), 
                 results_ttl = 7200, 
                 timeout = 7200) 
                 for batch_sample_size, demgen_task_id in request_batches]
+            print(f"runner tasks initiated: {tasks}")
             
         ####################
 
@@ -175,8 +175,6 @@ async def new_simulation(sim_param: SimulationParameters):
             traceback.print_exc()
             raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.') 
             
-        
-
         
         queued_jobs = queue.get_job_ids()
         # Fetch started jobs, get queue positions of tasks
