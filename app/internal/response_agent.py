@@ -130,12 +130,14 @@ class Agent:
         if trigger_value < self.agent_temperature:
             return []
         else:
-            sampled_datastr = random.choice(self.lt_memory.DataStrings)
-            if sampled_datastr:
+            if len(self.lt_memory.DataStrings) == 0:
+                return []
+
+            else:
+                sampled_datastr = random.choice(self.lt_memory.DataStrings)
                 memory_chunks = sampled_datastr.chunks
                 return [chunk.string for chunk in memory_chunks]
-            else:
-                return []
+        
     ###################
 
 
