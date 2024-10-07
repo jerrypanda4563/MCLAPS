@@ -147,12 +147,12 @@ class Agent:
                 return []
 
             else:
-                sampled_chunk: agent_data.Chunk = random.choice(self.lt_memory.DataChunks)
+                sampled_chunk = random.choice(self.lt_memory.DataChunks)
                 related_chunk_indices = sorted(enumerate(sampled_chunk.conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:round(self.memory_chunk_size/self.lt_memory_chunk_size)]
                 related_chunks = [self.lt_memory.DataChunks[index] for index, _ in related_chunk_indices]
                 related_strings = [chunk.string for chunk in related_chunks]
-                memory_chunks = related_strings.extend([sampled_chunk.string])
-                return memory_chunks
+                memory_strings = related_strings.extend([sampled_chunk.string])
+                return memory_strings
         
     ###################
 

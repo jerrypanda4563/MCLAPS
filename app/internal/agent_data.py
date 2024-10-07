@@ -221,7 +221,7 @@ class AgentData:
                         reconstructed_strings.append(chunk_group_reconstruct(target_chunk))
                     return reconstructed_strings
                 else: 
-                    return target_chunk_list    
+                    return [chunk.string for chunk in target_chunk_list]    
                 
             except Exception as e:
                 print(f"Error in fast query: {e}")
