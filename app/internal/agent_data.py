@@ -56,13 +56,15 @@ class Chunk(pydantic.BaseModel):
         def isotropic_rescaler(value: float) -> float:
             rescaled_value = (value + 1)/2
             return rescaled_value
-        
-        embedding_vector_reshaped = self.embedding_vector.reshape(1, -1)
-        chunk_embeddings_stacked = np.vstack(chunk_embeddings)
-        similarities = cs(embedding_vector_reshaped, chunk_embeddings_stacked)
-        conjugate_vector = similarities.flatten()
-        rescaled_conjugate_vector = np.array([isotropic_rescaler(value) for value in conjugate_vector])
-        return rescaled_conjugate_vector
+        if len(chunk_embeddings) == 0:
+            return np.array([0])
+        else:
+            embedding_vector_reshaped = self.embedding_vector.reshape(1, -1)
+            chunk_embeddings_stacked = np.vstack(chunk_embeddings)
+            similarities = cs(embedding_vector_reshaped, chunk_embeddings_stacked)
+            conjugate_vector = similarities.flatten()
+            rescaled_conjugate_vector = np.array([isotropic_rescaler(value) for value in conjugate_vector])
+            return rescaled_conjugate_vector
 
 # #####################
 # class DataStr(pydantic.BaseModel):
