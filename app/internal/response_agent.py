@@ -101,10 +101,10 @@ class Agent:
             #     print(f"Rate limit error serverside: {e}")
             #     rate_limiter.
             #     time.sleep(5)
-
-                continue
-        return None
-        
+        else:
+            print(f"Warning: zero vector returned for string {string}")
+            return np.zeros(self.embedding_dimension)
+            
         
 
     def evaluator(self, string1:str, string2:str) -> float:

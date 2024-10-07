@@ -41,7 +41,7 @@ class Chunk(pydantic.BaseModel):
     # DataStr_index: int 
     string: str 
     embedding_vector: np.ndarray 
-    conjugate_vector: Optional[np.ndarray] = np.array([]) 
+    conjugate_vector: Optional[np.ndarray] = None
     
     class Config:
         arbitrary_types_allowed = True
@@ -52,10 +52,9 @@ class Chunk(pydantic.BaseModel):
             return np.array(v)
         return v
     
+    #computation include self similarity as chunk is added to DataChunks before this function is called
     def compute_conjugate_vector(self, chunk_embeddings: List[np.ndarray]) -> np.ndarray:
-        def isotropic_rescaler(value: float) -> float:
-            rescaled_value = (value + 1)/2
-            return rescaled_value
+        conjugate_vector = np.array([])
         if len(chunk_embeddings) == 0:
             return np.array([0])
         else:
@@ -63,7 +62,8 @@ class Chunk(pydantic.BaseModel):
             chunk_embeddings_stacked = np.vstack(chunk_embeddings)
             similarities = cs(embedding_vector_reshaped, chunk_embeddings_stacked)
             conjugate_vector = similarities.flatten()
-            rescaled_conjugate_vector = np.array([isotropic_rescaler(value) for value in conjugate_vector])
+            rescaled_conjugate_vector = (conjugate_vector + 1) / 2
+            rescaled_conjugate_vector[self.index] = 0 ####sets self similarity to 0
             return rescaled_conjugate_vector
 
 # #####################
@@ -165,11 +165,20 @@ class AgentData:
         return rescaled_conjugate_vector
 
     def update_conjugate_vectors(self, new_chunk: Chunk) -> None:
+        
+        
         if len(self.DataChunks) <= 1:
             pass
         else:
-            for chunk in self.DataChunks[:-1]:
-                chunk.conjugate_vector = np.append(chunk.conjugate_vector, new_chunk.conjugate_vector[chunk.index])
+            # for chunk in self.DataChunks[:-1]:
+            #     chunk.conjugate_vector = np.append(chunk.conjugate_vector, new_chunk.conjugate_vector[chunk.index])
+            
+            #all chunks except the last one, i = 0,1,2 ... 
+            for i in range(len(self.DataChunks)-1):
+                ith_chunk = self.DataChunks[i]
+                ith_chunk.conjugate_vector = np.append(ith_chunk.conjugate_vector, new_chunk.conjugate_vector[i])
+
+
 
 
     #quick check to see if there is anything more related in database
@@ -219,14 +228,23 @@ class AgentData:
     def resturcture_memory(self):
         try:
             if len(self.DataChunks) >= self.memory_size: 
+                # Calculate average similarities for each chunk
                 chunk_average_similarities = [np.mean(chunk.conjugate_vector) for chunk in self.DataChunks]
+                # Find least relevant chunks by sorting indices based on similarity
                 least_relevant_chunk_indices = sorted(enumerate(chunk_average_similarities), key=lambda x: x[1])[0:round(self.loss_factor * len(self.DataChunks))]
+                # Extract the indices only
+                least_relevant_chunk_indices = [index for index, _ in least_relevant_chunk_indices]
+                # Delete conjugate vector entries BEFORE modifying self.DataChunks
+                for chunk in self.DataChunks:
+                    # Deleting from conjugate vectors using the original indices
+                    chunk.conjugate_vector = np.delete(chunk.conjugate_vector, least_relevant_chunk_indices)
+                # Sort indices in reverse order and delete from DataChunks to avoid index shifting issues
+                least_relevant_chunk_indices = sorted(least_relevant_chunk_indices, reverse=True)
                 for index in least_relevant_chunk_indices:
                     del self.DataChunks[index]
-                # delete chunks and update conjugate vectors
-                for chunk in self.DataChunks:
-                    chunk.conjugate_vector = np.delete(chunk.conjugate_vector, least_relevant_chunk_indices)
-                    chunk.index = self.DataChunks.index(chunk)
+                # Reindex the remaining chunks in DataChunks
+                for i, chunk in enumerate(self.DataChunks):
+                    chunk.index = i  # Update the chunk index after deletions
             else:
                 pass
         except Exception as e:
@@ -240,12 +258,13 @@ class AgentData:
         def add_chunk(input_string: str, input_string_embedding: np.ndarray) -> Chunk:
         
             chunk = Chunk(
-                index=len(self.DataChunks),
+                index=len(self.DataChunks), ## 0th indexing same as python list indexing
                 string=input_string,
                 embedding_vector=input_string_embedding
             )
-            chunk.compute_conjugate_vector([existing_chunk.embedding_vector for existing_chunk in self.DataChunks])
             self.DataChunks.append(chunk)
+            chunk.compute_conjugate_vector([existing_chunk.embedding_vector for existing_chunk in self.DataChunks])
+    
             self.update_conjugate_vectors(chunk)
 
             return chunk

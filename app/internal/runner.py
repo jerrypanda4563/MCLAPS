@@ -59,8 +59,6 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
             for future in as_completed(future_to_simulation):
                 n_of_completed_runs += 1
                 result = future.result()
-                result_response = result["response_data"]
-                answers = [response["answer"] for response in result_response]
                 query = {"_id": sim_id}
                 database.update_one(query, {"$push":{"Simulation Result": result}})
                 database.update_one(query, {"$inc":{"Completed Runs": 1}})
