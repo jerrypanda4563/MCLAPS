@@ -121,6 +121,11 @@ class Agent:
                 return 1  # if fails, always stick with the current memory since max k is 1
         
     def st_memory_length(self) -> int:
+        for i, memory_object in enumerate(self.st_memory):
+            if type(memory_object) != str:
+                print(f"Memory object is not string: {memory_object}")
+                raise ValueError(f"Memory object index number {i} is not a string.")
+            
         return count_tokens(' '.join(self.st_memory))
     
     def debug_st_memory(self) -> None:
