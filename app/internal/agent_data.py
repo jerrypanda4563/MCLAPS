@@ -165,8 +165,11 @@ class AgentData:
         return rescaled_conjugate_vector
 
     def update_conjugate_vectors(self, new_chunk: Chunk) -> None:
-        for chunk in self.DataChunks[:-1]:
-            chunk.conjugate_vector = np.append(chunk.conjugate_vector, new_chunk.conjugate_vector[chunk.index])
+        if len(self.DataChunks) <= 1:
+            pass
+        else:
+            for chunk in self.DataChunks[:-1]:
+                chunk.conjugate_vector = np.append(chunk.conjugate_vector, new_chunk.conjugate_vector[chunk.index])
 
 
     #quick check to see if there is anything more related in database
@@ -249,29 +252,7 @@ class AgentData:
         
         
         try:
-            # datastr = input_string
-            # datastr_embedding = self.embed_large_text(input_string)
-            # datastr_uuid = uuid.uuid4()
-            # datastr_chunked = chunking.chunk_string(input_string, chunk_size = self.chunk_size)
-            
-            # list_of_chunk_embeddings: List[np.ndarray] = []
-            # with ThreadPoolExecutor(max_workers=len(datastr_chunked)) as executor:
-            #     list_of_chunk_embeddings = list(executor.map(self.embed_large_text, datastr_chunked))
-
-            # list_of_chunks: List[Chunk] = []    
-            # for string, embedding in zip(datastr_chunked, list_of_chunk_embeddings):
-            #     data_chunk = add_chunk(datastr_index= len(list_of_chunks) , parent_str_id = datastr_uuid, input_string = string, input_string_embedding = embedding)
-            #     list_of_chunks.append(data_chunk)
-            
-            # data_str = DataStr(
-            #     DataStr_id = datastr_uuid,
-            #     index = len(self.DataStrings),
-            #     chunks = list_of_chunks,
-            #     string = datastr,
-            #     embedding_vector = datastr_embedding
-            # )
-            # self.DataStrings.append(data_str)
-
+           ## redundant datastring code removed#
             list_of_chunked_str: List[str] = chunking.chunk_string(input_string, chunk_size = self.chunk_size)
             with ThreadPoolExecutor(max_workers=len(list_of_chunked_str)) as executor:
                 list_of_chunk_embeddings: List[np.ndarray] = list(executor.map(self.embed_large_text, list_of_chunked_str))
@@ -305,6 +286,28 @@ class AgentData:
             
             
 
+ # datastr = input_string
+            # datastr_embedding = self.embed_large_text(input_string)
+            # datastr_uuid = uuid.uuid4()
+            # datastr_chunked = chunking.chunk_string(input_string, chunk_size = self.chunk_size)
+            
+            # list_of_chunk_embeddings: List[np.ndarray] = []
+            # with ThreadPoolExecutor(max_workers=len(datastr_chunked)) as executor:
+            #     list_of_chunk_embeddings = list(executor.map(self.embed_large_text, datastr_chunked))
+
+            # list_of_chunks: List[Chunk] = []    
+            # for string, embedding in zip(datastr_chunked, list_of_chunk_embeddings):
+            #     data_chunk = add_chunk(datastr_index= len(list_of_chunks) , parent_str_id = datastr_uuid, input_string = string, input_string_embedding = embedding)
+            #     list_of_chunks.append(data_chunk)
+            
+            # data_str = DataStr(
+            #     DataStr_id = datastr_uuid,
+            #     index = len(self.DataStrings),
+            #     chunks = list_of_chunks,
+            #     string = datastr,
+            #     embedding_vector = datastr_embedding
+            # )
+            # self.DataStrings.append(data_str)
 
 
 
