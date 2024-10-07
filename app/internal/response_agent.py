@@ -135,9 +135,10 @@ class Agent:
                 return []
 
             else:
-                sampled_chunk = random.choice(self.lt_memory.DataChunks)
+                sampled_chunk: agent_data.Chunk = random.choice(self.lt_memory.DataChunks)
                 related_chunk_indices = sorted(enumerate(sampled_chunk.conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:round(self.memory_chunk_size/self.lt_memory_chunk_size)]
-                related_strings = [self.lt_memory.DataChunks[index].string for index, _ in related_chunk_indices]
+                related_chunks = [self.lt_memory.DataChunks[index] for index, _ in related_chunk_indices]
+                related_strings = [chunk.string for chunk in related_chunks]
                 memory_chunks = related_strings.extend([sampled_chunk.string])
                 return memory_chunks
         
@@ -165,7 +166,7 @@ class Agent:
                 queried_memory = self.lt_memory.query(query_str, k)
                 self.st_memory = current_memory + queried_memory + random_memory
             else: 
-                #generates random memory along with
+                #generates random memory along with current memory, ignores query
                 self.st_memory = current_memory + random_memory
 
         if self.st_memory_length() > self.st_memory_capacity:
@@ -178,14 +179,14 @@ class Agent:
         with ThreadPoolExecutor(max_workers=len(self.st_memory)) as executor:
             similarity_scores = list(executor.map(lambda x: self.evaluator(string, x), self.st_memory))
 
-        new_lt_memory: List[str] = []
+        new_lt_memory: list[str] = []
         while self.st_memory_length() > self.st_memory_capacity:
             index = similarity_scores.index(min(similarity_scores))
             forgotten_memory = self.st_memory.pop(index)
             similarity_scores.pop(index)
             new_lt_memory.append(forgotten_memory)
-        new_lt_memory = '\n'.join(new_lt_memory)
-        self.lt_memory.add_data_str(new_lt_memory)
+        new_lt_memory_joined = '\n'.join(new_lt_memory)
+        self.lt_memory.add_data_str(new_lt_memory_joined)
             
 
     #add limiter
@@ -235,7 +236,7 @@ class Agent:
     def chat(self, query:str) -> str:
         self.construct_st_memory(query)   #changes system message 
         response: str = self.model_response(query)
-        resoponse_chunked = chunking.chunk_string(response, chunk_size = self.memory_chunk_size)
+        resoponse_chunked: list[str] = chunking.chunk_string(response, chunk_size = self.memory_chunk_size)
         self.st_memory.extend(resoponse_chunked)
         if self.st_memory_length() > self.st_memory_capacity:
             self.restructure_memory(query)
@@ -244,8 +245,8 @@ class Agent:
 
 
 
-    ####************ This fills up the st memory only, and restruc
-    def inject_memory(self, string) -> None:
+    ####************ 
+    def inject_memory(self, string: str) -> None:
         string_length: int = count_tokens(string)
 
         if string_length >= self.lt_memory_trigger_length:

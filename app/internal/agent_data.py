@@ -53,11 +53,12 @@ class Chunk(pydantic.BaseModel):
         return v
     
     #computation include self similarity as chunk is added to DataChunks before this function is called
-    def compute_conjugate_vector(self, chunk_embeddings: List[np.ndarray]) -> np.ndarray:
-        conjugate_vector = np.array([])
+    def compute_conjugate_vector(self, chunk_embeddings: List[np.ndarray]) -> None:
+        self.conjugate_vector = np.array([])
         if len(chunk_embeddings) == 0:
 
-            return np.array([0])
+            self.conjugate_vector =  np.array([0])
+
         else:
             embedding_vector_reshaped = self.embedding_vector.reshape(1, -1)
             chunk_embeddings_stacked = np.vstack(chunk_embeddings)
@@ -65,7 +66,9 @@ class Chunk(pydantic.BaseModel):
             conjugate_vector = similarities.flatten()
             rescaled_conjugate_vector = (conjugate_vector + 1) / 2
             rescaled_conjugate_vector[self.index] = 0 ####sets self similarity to 0
-            return rescaled_conjugate_vector
+
+            self.conjugate_vector = rescaled_conjugate_vector
+
 
 # #####################
 # class DataStr(pydantic.BaseModel):
@@ -178,8 +181,6 @@ class AgentData:
             # for i in range(len(self.DataChunks)-1):
             #     ith_chunk = self.DataChunks[i]
             #     ith_chunk.conjugate_vector = np.append(ith_chunk.conjugate_vector, new_chunk.conjugate_vector[i])
-
-
 
 
     #quick check to see if there is anything more related in database
