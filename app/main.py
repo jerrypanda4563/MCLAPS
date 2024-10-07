@@ -22,7 +22,7 @@ import uuid
 from app.api_clients.mclaps_demgen import MclapsDemgenClient
 
 import logging
-
+import traceback
 
 
 
@@ -89,94 +89,146 @@ async def all_tasks():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching tasks: {e}")
 
-@application.get("/simulations/clear_tasks")
-async def clear_tasks():
+from rq.job import Job
+@application.get("/simulations/kill_all")
+async def kill_all():
     try:
+        # Retrieve all job IDs in the queue (queued jobs)
+        job_ids = queue.job_ids
+        
+        # Cancel jobs in the queue
+        for job_id in job_ids:
+            job = Job.fetch(job_id, connection=queue.connection)
+            job.cancel()  # Cancel the queued job
+
+        # Get the registry of started jobs
+        registry = StartedJobRegistry(queue=queue)
+        started_job_ids = registry.get_job_ids()
+
+        # Cancel jobs that are currently started
+        for job_id in started_job_ids:
+            job = Job.fetch(job_id, connection=queue.connection)
+            if job.is_started:  # Check if the job is started
+                job.cancel()  # Cancel the started job
+
+        # Optionally: You could also empty the queue after canceling all jobs
         queue.empty()
-        return {"message": "All tasks cleared."}
+
+        return {"message": "All queued and started tasks killed."}
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
 
-@application.post("/debug")
-async def debug(sim_param: SimulationParameters):
-    return sim_param.dict()
+@application.get("/simulations/clear_queue")
+async def clear_queue():
+    try:
+        queue.empty()
+        return {"message": "Queue cleared."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
 
-
+from app.api_clients.mclaps_demgen import MclapsDemgenClient, DemgenRequest
 @application.post("/simulations/new_simulation")
 async def new_simulation(sim_param: SimulationParameters):
     
     #unwraps simulation parameters
-
+    
     if test.mongo_connection_test():
-        print("MongoDB connection successful.")
+        print("database connection successful.")
+    else:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
 
-        sim_id = str(uuid.uuid4())
-        n_of_runs=sim_param.n_of_runs
-        n_of_workers=sim_param.workers
-        survey_params=sim_param.survey_params
-        demographic_params=sim_param.demographic_params
-        agent_params=sim_param.agent_params
-        
-        survey_object: dict = survey_params.dict()
+    sim_id = str(uuid.uuid4())
+    n_of_runs=sim_param.n_of_runs
+    n_of_workers=sim_param.workers
+    survey_params=sim_param.survey_params
+    demographic_params=sim_param.demographic_params
+    agent_params=sim_param.agent_params
+    
+    survey_object: dict = survey_params.dict()
 
-        #batching the simulation runs
-        batch_size = 250
-        if n_of_runs > batch_size:
-        
-            n_of_batches = n_of_runs // batch_size
-            remainder_batch_size = n_of_runs % batch_size
-            request_batches = [i for i in [batch_size] * n_of_batches + [remainder_batch_size] if i != 0]
-        
-        else:
-            request_batches = [n_of_runs]
 
-        try:
+    #############send demgen request here
+    demgen = MclapsDemgenClient()
+    try:
+        demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sim_id = sim_id, sampling_conditions = demographic_params))
+        print(f"Demgen request successful: {demgen_task}")
+    except Exception as e:
+        print(f"Demgen request failed: {e}")
+        traceback.print_exc()
+        return False
+    
+    demgen_task_ids = demgen_task["task_ids"] #list of task ids for each batch
+    print(f"Demgen task ids: {demgen_task_ids}")
+    
+    ####################
+    #batching the simulation runs
+    batch_size = 250
+    if n_of_runs > batch_size:
+    
+        n_of_batches = n_of_runs // batch_size
+        remainder_batch_size = n_of_runs % batch_size
+        request_batch_sizes = [i for i in [batch_size] * n_of_batches + [remainder_batch_size] if i != 0]
+        request_batches = []
+        for batch, demgen_task_id in zip(request_batch_sizes, demgen_task_ids):
+            request_batch = (batch, demgen_task_id)
+            request_batches.append(request_batch)
+    else:
+        request_batches = [(n_of_runs, demgen_task_ids[0])]
 
-            tasks = [queue.enqueue(
+
+    try:
+        # tasks = [queue.enqueue(
+        #     runner.run_simulation, 
+        #     args = (sim_id, demgen_task_id, survey_object, agent_params, batch_sample_size, n_of_workers), 
+        #     retry = rq.Retry(max=3, interval = 10), 
+        #     results_ttl = 7200, 
+        #     timeout = 7200) 
+        #     for batch_sample_size, demgen_task_id in request_batches]
+        tasks: list[Job] = []
+        for request_batch in request_batches:
+            task = queue.enqueue(
                 runner.run_simulation, 
-                args = (sim_id, survey_object, demographic_params, agent_params, batch_sample_size, n_of_workers), 
+                args = (sim_id, request_batch[1], survey_object, agent_params, request_batch[0], n_of_workers), 
                 retry = rq.Retry(max=3, interval = 10), 
                 results_ttl = 7200, 
-                timeout = 7200) 
-                for batch_sample_size in request_batches]
+                timeout = 7200)
+            tasks.append(task)
             
-        except Exception as e:
-            raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.') 
+        print(f"runner tasks initiated: {tasks}")
+    ####################
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.') 
         
-        queued_jobs = queue.get_job_ids()
+    
+    queued_jobs = queue.get_job_ids()
+    # Fetch started jobs, get queue positions of tasks
+    started_registry = rq.registry.StartedJobRegistry(queue=queue)
+    started_job_ids = started_registry.get_job_ids()
+    all_job_ids = queued_jobs + started_job_ids
+    job_position_map = {job_id: idx + 1 for idx, job_id in enumerate(all_job_ids)}
+    queue_positions = [job_position_map.get(task.id, -1) for task in tasks]
+    
+    tasks_queued = {k:v for k,v in zip([task.id for task in tasks], request_batches)}
+    data_object: Dict = {
+        "_id":sim_id,
+        "Queued Tasks": tasks_queued,
+        "Survey Name": survey_params.name,
+        "Survey Description": survey_params.context,
+        "Survey Questions": [json.loads(question.json()) for question in survey_params.questions],
+        "Target Demographic": json.loads(demographic_params.json()),
+        "Number of Runs": n_of_runs,
+        "Completed Runs": 0,
+        "Run Status": True,
+        "Simulation Result": []
+    }
+    database = mongo_db.collection_simulations
+    database.insert_one(data_object)
 
-        # Fetch started jobs, get queue positions of tasks
-        started_registry = rq.registry.StartedJobRegistry(queue=queue)
-        started_job_ids = started_registry.get_job_ids()
-        all_job_ids = queued_jobs + started_job_ids
-        job_position_map = {job_id: idx + 1 for idx, job_id in enumerate(all_job_ids)}
-        queue_positions = [job_position_map.get(task.id, -1) for task in tasks]
-        
-        tasks_queued = {k:v for k,v in zip([task.id for task in tasks], request_batches)}
-        data_object: Dict = {
-            "_id":sim_id,
-            "Queued Tasks": tasks_queued,
-            "Survey Name": survey_params.name,
-            "Survey Description": survey_params.description,
-            "Survey Questions": [json.loads(question.json()) for question in survey_params.questions],
-            "Target Demographic": json.loads(demographic_params.json()),
-            "Number of Runs": n_of_runs,
-            "Completed Runs": 0,
-            "Run Status": True,
-            "Simulation Result": []
-        }
-        database = mongo_db.collection_simulations
-        database.insert_one(data_object)
-        
+    return {"task_id": [task.id for task in tasks], "simulation_id": sim_id, "queue_position": queue_positions} 
 
-        # try:
-        #     background_tasks.add_task(runner.run_simulation, sim_id, survey_object, demographic_params, agent_params, n_of_runs, n_of_workers)
-        # except Exception as e:
-        #     raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.')
-
-        return {"task_id": [task.id for task in tasks], "simulation_id": sim_id, "queue_position": queue_positions} 
-    else:
-        raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
 
 
 

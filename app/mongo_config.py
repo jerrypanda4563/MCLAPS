@@ -12,7 +12,6 @@ collection_simulations=database["Simulations"]
 def db_connection_test() -> bool:
     try:
         mongo.admin.command('ping')
-        print("Pinged your deployment. You successfully connected to MongoDB!")
         return True
     except Exception as e:
         print(f'Mongo connection failed: {e}')

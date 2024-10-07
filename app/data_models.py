@@ -78,6 +78,7 @@ class CheckboxesQuestion(BaseModel):
 
 class RankingQuestion(BaseModel):
     type: str = Field("ranking", Literal=True)
+    answer_format: Optional[str] = "Any"
     question: str
     choices: list[str]
     answer: None
@@ -102,18 +103,20 @@ class LinearScaleQuestion(BaseModel):
     
 class ShortAnswerQuestion(BaseModel):
     type: str = Field("short answer", Literal=True)
+    answer_format: Optional[str] = "string"
     question: str
     answer: None
     
 class LongAnswerQuestion(BaseModel):
     type: str = Field("long answer", Literal=True)
+    answer_format: Optional[str] = "string"
     question: str
     answer: None
 
 
 class SurveyModel(BaseModel):
     name: str
-    description: Optional[str] = None
+    context: Optional[list[str]] = None
     questions: List[Union[MultipleChoiceQuestion, CheckboxesQuestion, LinearScaleQuestion, RankingQuestion, ShortAnswerQuestion, LongAnswerQuestion]]
 
     @validator('questions', each_item=True)
@@ -127,10 +130,29 @@ class SurveyModel(BaseModel):
 
 
 class AgentParameters(BaseModel):
+
     agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-4o", "gpt-4o-mini"]] = "gpt-3.5-turbo"
-    agent_temperature: Optional[float] = 1.21
+    embedding_model: Optional[Literal["text-embedding-3-small", "text-embedding-3-large"]] = "text-embedding-3-small"
+    llm_temperature: Optional[float] = 1.21  #for the llm temp
+    agent_temperature: Optional[float] = 0.1   #between 0 and 1, if 1 means that the agent is erratic and nuts
     existance_date: Optional[str] = datetime.date.today().isoformat()
     json_mode: Optional[bool] = True
+
+    #st_memory_params
+    memory_context_length: Optional[int] = 4196 #in tokens
+    max_output_length: Optional[int] = 512  #in tokens
+    lt_memory_trigger_length: Optional[int] = 1024 #in tokens
+    chunk_size: Optional[int] = 512   #in tokens
+
+    embedding_dimension: Optional[int] = 512
+    
+
+    #lt_memory params , chunk size for lt_memory is calculated as chunk_size/(reconstruction_top_n+1)
+    memory_limit: Optional[int] = 1000  #in chunks 
+    memory_loss_factor: Optional[float] = 0.1
+    sampling_top_n: Optional[int] = 3 #in chunks
+    reconstruction_top_n: Optional[int] = 3 #in chunks
+    reconstruction_factor: Optional[float] = 0.1  # percentage of memory limit
     class Config:
         extra="forbid"
 
@@ -142,7 +164,7 @@ class SimulationParameters(BaseModel):
     n_of_runs: int
     workers: Optional[int] = 10
 
-    MAX_WORKERS: ClassVar[int] = 15
+    MAX_WORKERS: ClassVar[int] = 50
     @validator('workers', pre=True, always=True)
     def check_max_workers(cls, v):
         if v is None:
@@ -151,7 +173,7 @@ class SimulationParameters(BaseModel):
             raise ValueError(f"workers cannot exceed {cls.MAX_WORKERS}")
         return v
     
-    MAX_RUNS: ClassVar[int] = 1000
+    MAX_RUNS: ClassVar[int] = 10000
     @validator('n_of_runs', pre=True, always=True)
     def check_n_of_runs(cls, v):
         if v is None:
