@@ -123,6 +123,13 @@ class Agent:
     def st_memory_length(self) -> int:
         return count_tokens(' '.join(self.st_memory))
     
+    def debug_st_memory(self) -> None:
+        for i, memory_object in enumerate(self.st_memory):
+            if type(memory_object) != str:
+                print(f"Memory object is not string: {memory_object}")
+                raise ValueError(f"Memory object index number {i} is not a string.")
+            
+    
     ################
     #can potentially be added with random generation of memory based on initialization data
     def random_memory(self) -> list[str]:
@@ -234,6 +241,7 @@ class Agent:
     
     #interacted functions
     def chat(self, query:str) -> str:
+        self.debug_st_memory()
         self.construct_st_memory(query)   #changes system message 
         response: str = self.model_response(query)
         resoponse_chunked: list[str] = chunking.chunk_string(response, chunk_size = self.memory_chunk_size)
@@ -254,10 +262,10 @@ class Agent:
 
         else:
             available_st_memory: int = self.st_memory_capacity - self.st_memory_length()
-            string_chunks: list[str] = chunking.chunk_string(string, chunk_size = self.memory_chunk_size) #chunk size to be larger for strings within st memory
             if string_length > available_st_memory:
                 self.lt_memory.add_data_str(string) ###directly addes the string chunked in AgentData
             else: 
+                string_chunks: list[str] = chunking.chunk_string(string, chunk_size = self.memory_chunk_size) #chunk size to be larger for strings within st memory
                 self.st_memory.extend(string_chunks)
                 if self.st_memory_length() > self.st_memory_capacity:
                     self.restructure_memory(string)

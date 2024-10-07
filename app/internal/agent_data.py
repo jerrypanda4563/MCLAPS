@@ -257,7 +257,7 @@ class AgentData:
     ####add in logic for deleting old chunks, restruturing existing chunks and restructuring of relational matrix once max chunk size is hit
     def add_data_str(self, input_string: str):
 
-        def add_chunk(input_string: str, input_string_embedding: np.ndarray) -> Chunk:
+        def add_chunk(input_string: str, input_string_embedding: np.ndarray) -> None:
         
             chunk = Chunk(
                 index=len(self.DataChunks), ## 0th indexing same as python list indexing
@@ -265,31 +265,20 @@ class AgentData:
                 embedding_vector=input_string_embedding
             )
             self.DataChunks.append(chunk)
-            chunk.compute_conjugate_vector([existing_chunk.embedding_vector for existing_chunk in self.DataChunks])
-            debug_message = f"Chunk index: {chunk.index}, conjugate vector: {chunk.conjugate_vector}"
-            try:
-                self.update_conjugate_vectors(chunk)
-            except Exception as e:
-                print(f"Error in updating conjugate vectors: {e}, {debug_message}")
-                traceback.print_exc()
+            chunk.compute_conjugate_vector([current_chunk.embedding_vector for current_chunk in self.DataChunks])
+            self.update_conjugate_vectors(chunk)
 
-            return chunk
         
         
         try:
-           ## redundant datastring code removed#
             list_of_chunked_str: List[str] = chunking.chunk_string(input_string, chunk_size = self.chunk_size)
             with ThreadPoolExecutor(max_workers=len(list_of_chunked_str)) as executor:
                 list_of_chunk_embeddings: List[np.ndarray] = list(executor.map(self.embed_large_text, list_of_chunked_str))
-
             for string, embedding in zip(list_of_chunked_str, list_of_chunk_embeddings):
-                new_chunk = add_chunk(string, embedding)
-                self.DataChunks.append(new_chunk)
-
+                add_chunk(string, embedding)
             self.resturcture_memory()
             
         except Exception as e:
-            print(f"Error in adding string to agent data: {e}")
             traceback.print_exc()
             raise Exception(f"Error in add_str in agent_data: {e}")
         
