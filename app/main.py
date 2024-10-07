@@ -134,7 +134,7 @@ async def new_simulation(sim_param: SimulationParameters):
     #unwraps simulation parameters
     
     if test.mongo_connection_test():
-        print("MongoDB connection successful.")
+        print("database connection successful.")
     else:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")

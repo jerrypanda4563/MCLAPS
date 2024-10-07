@@ -16,7 +16,6 @@ from openai.error import OpenAIError, Timeout, ServiceUnavailableError, RateLimi
 from sklearn.metrics.pairwise import cosine_similarity as cs
 from concurrent.futures import ThreadPoolExecutor
 from app.data_models import AgentParameters
-
 import gc
 
 openai.api_key = settings.OPEN_AI_KEY
@@ -151,34 +150,36 @@ class Agent:
     
 
     def construct_st_memory(self, query_str: str) -> None:
-        if random.random() < self.agent_temperature:
-            random_memory = self.random_memory()
-        else:
-            random_memory = []
-        
-        current_memory = self.st_memory.copy()
-        if len(self.st_memory) == 0:
-            queried_memory = self.lt_memory.query(query_str)
-            self.st_memory =current_memory + queried_memory + random_memory
-        else:
-            #1-agent_temp/2 chance of querying memory
-            if random.random() > self.agent_temperature/2:
-                with ThreadPoolExecutor(max_workers=len(self.st_memory)) as executor:
-                    similarity_scores = list(executor.map(lambda x: self.evaluator(query_str, x), self.st_memory))
-                k = np.average(similarity_scores) #mean similarity to query
-                queried_memory = self.lt_memory.query(query_str, k)
-                try:
+        try:
+            if random.random() < self.agent_temperature:
+                random_memory = self.random_memory()
+            else:
+                random_memory = []
+            
+            current_memory = self.st_memory.copy()
+            if len(self.st_memory) == 0:
+                queried_memory = self.lt_memory.query(query_str)
+                self.st_memory =current_memory + queried_memory + random_memory
+            else:
+                #1-agent_temp/2 chance of querying memory
+                if random.random() > self.agent_temperature/2:
+                    with ThreadPoolExecutor(max_workers=len(self.st_memory)) as executor:
+                        similarity_scores = list(executor.map(lambda x: self.evaluator(query_str, x), self.st_memory))
+                    k = np.average(similarity_scores) #mean similarity to query
+                    queried_memory = self.lt_memory.query(query_str, k)
                     self.st_memory = current_memory + queried_memory + random_memory
-                except Exception as e:
-                    traceback.print_exc()
-                    raise Exception(f"Error in memory construction {e}, {type(current_memory)}, {type(queried_memory)}, {type(random_memory)}")
-            else: 
-                #generates random memory along with current memory, ignores query
-                self.st_memory = current_memory + random_memory
+                else: 
+                    #generates random memory along with current memory, ignores query
+                    self.st_memory = current_memory + random_memory
 
-        if self.st_memory_length() > self.st_memory_capacity:
-            self.restructure_memory(string = query_str)
-    
+            if self.st_memory_length() > self.st_memory_capacity:
+                self.restructure_memory(string = query_str)
+
+        except Exception as e:
+            print(f"Warning: Error in constructing memory: {e}")
+            traceback.print_exc()
+            self.st_memory = self.st_memory
+        
     
     #pop out strings with lowest similarity to query and add popped memory to lt_memory
     def restructure_memory(self, string:str) -> None:
