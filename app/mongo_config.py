@@ -6,8 +6,7 @@ from pymongo.server_api import ServerApi
 
 
 mongo=MongoClient(settings.MONGO_URI, server_api=ServerApi('1'))
-database=mongo["BubbleMVP"]
-collection_simulations=database["Simulations"]
+database=mongo["simulations"]
 
 def db_connection_test() -> bool:
     try:

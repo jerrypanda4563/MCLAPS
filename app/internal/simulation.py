@@ -3,10 +3,12 @@ from app.data_models import SurveyModel, DemographicModel, AgentParameters
 import traceback
 from typing import Dict, List, Optional
 from app.internal.prompt_payloads import initialization_prompt, Iterator
+from app.mongo_config import database
 
 import json
 import openai.error
 import time
+import uuid
 
 
 
@@ -18,9 +20,13 @@ import time
 
 class Simulator():
     #unwraps agent parameters and performs initialization of agent 
-    def __init__(self, survey: Dict, demographic: Dict, agent_params: AgentParameters, retries: Optional[int] = 3):
+    def __init__(self, request_id: str, survey: Dict, demographic: Dict, agent_params: AgentParameters, retries: Optional[int] = 3):
         
-        self.results: list[dict] = []
+        self.request_id = request_id
+        self.simulator_id = str(uuid.uuid4())
+        self.database = database
+
+        
 
         self.survey_context: list[str] = survey["context"]
         self.json_mode: bool = agent_params.json_mode
@@ -38,7 +44,16 @@ class Simulator():
         self.retry_policy = retries
         
         
-    def simulate(self) -> Dict:
+    def simulate(self) -> None:
+
+        self.database["results"].insert_one({"_id": self.simulator_id,
+                                "request_id": self.request_id, 
+                                "demographic": self.demographic, 
+                                "persona": self.persona, 
+                                "response_data": []})
+        
+        result_object_query = {"_id": self.simulator_id}
+        request_object_query = {"_id": self.request_id}
 
         for context in self.survey_context:
             self.simulator.inject_memory(context)
@@ -47,42 +62,45 @@ class Simulator():
         for _ in range(self.iterator.n_of_iter):
             current_iteration = self.iterator.iter()
             schema = self.iterator.iterations[_]
-
             for i in range(self.retry_policy):
                 try: 
                     result = self.simulator.chat(current_iteration)
-                    print(result)
+                    if self.json_mode:
+                        try:
+                            response_json = json.loads(result)
+                            answer = response_json["answer"]
+                            schema["answer"] = answer
+                        except Exception as e: 
+                            print(f"Warning: JSON error in simulation run for simulator {self.simulator_id}: {e}")
+                            schema["answer"] = result
+                    else:
+                        schema["answer"] = result
                     break
+
                 except (openai.error.ServiceUnavailableError, openai.error.Timeout, openai.error.RateLimitError) as e:
-                    print(f'OpenAI error in simulation run for agent {self.simulator.agent_id} (Attempt {i + 1}): for question {_+1}. {e}')
+                    print(f'OpenAI error in simulation run for simulator {self.simulator_id} (Attempt {i + 1}): for question {_+1}. {e}')
                     traceback.print_exc()  
             else:
                 print(f"Maximum retries reached for question: {json.dumps(schema)}. Skipping to next question.")
                 schema["answer"] = None
-                self.results.append(schema)
                 break
+            #pushing to result object based on json mode
+            self.database["results"].update_one(result_object_query, {"$push": {"response_data": schema}})
+            self.database["requests"].update_one(request_object_query, {"$inc": {"completed_timesteps": 1}})
             
-            if self.json_mode:
-                try:
-                    response_json = json.loads(result)
-                    answer = response_json["answer"]
-                    schema["answer"] = answer
-                    self.results.append(schema)
-                except Exception as e: 
-                    schema["answer"] = result
-                    self.results.append(schema)
-            else:
-                schema["answer"] = result
-                self.results.append(schema)
+
+        #updating request object once all iterations are completed
+        self.database["requests"].update_one(request_object_query, {"$inc":{"completed_runs": 1}})
+        self.database["requests"].update_one(request_object_query, {"$push": {"result_ids": self.simulator_id}})
+            
+
+        
         
 
-        simulation_result = {
-            "response_data": self.results,
-            "demographic_data": self.demographic,
-            "persona": self.persona
-        }
+        
 
-        return simulation_result
+        
+
 
 
 

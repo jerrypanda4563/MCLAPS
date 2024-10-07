@@ -162,7 +162,6 @@ async def new_simulation(sim_param: SimulationParameters):
     demgen_task_ids = demgen_task["task_ids"] #list of task ids for each batch
     print(f"Demgen task ids: {demgen_task_ids}")
     
-    ####################
     #batching the simulation runs
     batch_size = 250
     if n_of_runs > batch_size:
@@ -179,13 +178,6 @@ async def new_simulation(sim_param: SimulationParameters):
 
 
     try:
-        # tasks = [queue.enqueue(
-        #     runner.run_simulation, 
-        #     args = (sim_id, demgen_task_id, survey_object, agent_params, batch_sample_size, n_of_workers), 
-        #     retry = rq.Retry(max=3, interval = 10), 
-        #     results_ttl = 7200, 
-        #     timeout = 7200) 
-        #     for batch_sample_size, demgen_task_id in request_batches]
         tasks: list[Job] = []
         for request_batch in request_batches:
             task = queue.enqueue(
@@ -197,12 +189,30 @@ async def new_simulation(sim_param: SimulationParameters):
             tasks.append(task)
             
         print(f"runner tasks initiated: {tasks}")
-    ####################
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.') 
         
-    
+    request_batch_states: dict = {demgen_task_id: True for demgen_task_id in demgen_task_ids}
+    total_timesteps: int = n_of_runs * len(survey_object["questions"])
+    data_object: Dict = {
+        "_id":sim_id,
+        "batch_states": request_batch_states,
+        "name": survey_params.name,
+        "context": survey_params.context,
+        "iterations": [json.loads(question.json()) for question in survey_params.questions],
+        "demographic_sampling_conditions": json.loads(demographic_params.json()),
+        "n_of_runs": n_of_runs,
+        "completed_runs": 0,
+        "total_timesteps": total_timesteps,
+        "completed_timesteps": 0,
+        "run_status": True,
+        "progress": 0,
+        "result_ids": []
+    }
+    database = mongo_db.database["requests"]
+    database.insert_one(data_object)
+
     queued_jobs = queue.get_job_ids()
     # Fetch started jobs, get queue positions of tasks
     started_registry = rq.registry.StartedJobRegistry(queue=queue)
@@ -210,79 +220,34 @@ async def new_simulation(sim_param: SimulationParameters):
     all_job_ids = queued_jobs + started_job_ids
     job_position_map = {job_id: idx + 1 for idx, job_id in enumerate(all_job_ids)}
     queue_positions = [job_position_map.get(task.id, -1) for task in tasks]
-    
-    tasks_queued = {k:v for k,v in zip([task.id for task in tasks], request_batches)}
-    data_object: Dict = {
-        "_id":sim_id,
-        "Queued Tasks": tasks_queued,
-        "Survey Name": survey_params.name,
-        "Survey Description": survey_params.context,
-        "Survey Questions": [json.loads(question.json()) for question in survey_params.questions],
-        "Target Demographic": json.loads(demographic_params.json()),
-        "Number of Runs": n_of_runs,
-        "Completed Runs": 0,
-        "Run Status": True,
-        "Simulation Result": []
-    }
-    database = mongo_db.collection_simulations
-    database.insert_one(data_object)
-
     return {"task_id": [task.id for task in tasks], "simulation_id": sim_id, "queue_position": queue_positions} 
-
-
-
-
-
-# @application.get("/simulations/status")
-# async def sim_status(sim_id: str):
-#     if test.mongo_connection_test():
-#         database = mongo_db.collection_simulations
-#         try:
-#             simulation_obj: Dict = database.find_one({"_id": sim_id})
-#         except Exception as e:
-#             raise HTTPException(status_code=404, detail=f"Simulation id {sim_id} doesnt exist {e}")
-#         try:
-#             queued_tasks: Dict = simulation_obj["Queued Tasks"]
-#             task_states = []
-#             for task_id in list(queued_tasks.keys()):
-#                 task = queue.fetch_job(task_id)
-#                 task_states.append(task.get_status())
-            
-#             if all(task == "finished" for task in task_states):
-#                 database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
-#                 return {sim_id: f"Completed. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed."}
-            
-#             if all(task == "failed" for task in task_states):
-#                 database.update_one({"_id": sim_id}, {"$set": {"Run Status": False}})
-#                 return {sim_id: f"All tasks failed. Completed {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs."}
-            
-
-#             return {
-#                 sim_id: f"Running. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed.", 
-#                 "Task Status": task_states
-#                 }
-        
-#         except Exception as e:
-#             return {sim_id: f"Run Status: {simulation_obj['Run Status']}. {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} runs completed.",}
-    
-#     else:
-#         raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
         
 
 
+
+
+
+
+######### NEEDS UPDATE TO ACCOMODATE FOR NEW DATA STRUCTURE
 @application.get("/simulations/status")
 def sim_status(sim_id: str) -> Dict:
     if test.mongo_connection_test():
-        database = mongo_db.collection_simulations
-        simulation_obj: Dict = database.find_one({"_id": sim_id})
-        if simulation_obj:
-            return {
-                "simulation_id": sim_id,
-                "status": simulation_obj["Run Status"],
-                "progress": f" {simulation_obj['Completed Runs']} out of {simulation_obj['Number of Runs']} completed",
-                }
+        database = mongo_db.database["requests"]
+        request_object_query = {"_id": sim_id}
+        batch_states:dict = database.find_one(request_object_query)["batch_states"]
+        progress = 100 * (database.find_one(request_object_query)["completed_timesteps"]/database.find_one(request_object_query)["total_timesteps"])
+        if all(batch_states.values()) == False:
+            run_status = False
+            database.update_one(request_object_query, {"$set":{"run_status": run_status}})
+            database.update_one(request_object_query, {"$set":{"progress": progress}})
         else:
-            raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
+            run_status = True
+            database.update_one(request_object_query, {"$set":{"progress": progress}})
+        
+        return {"sim_id": sim_id, "run_status": run_status, "progress": f"{progress}%"}
+    
+    else:
+        raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
 
 @application.get("/simulations/load_simulation")
 async def load_simulation(sim_id: str) -> Dict:

@@ -18,96 +18,78 @@ import time
 
 demgen = MclapsDemgenClient()
 
+#demgen_task_id used as batch id for data logging
+def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params: AgentParameters, n_workers: Optional[int]=5) -> None:
+    
+    
 
-def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params: AgentParameters, n_of_runs: int, n_workers: Optional[int]=5) -> bool:
-  ####
-    database = mongo_db.collection_simulations
-    task_states = False
+    database = mongo_db.database["requests"]
+    request_object_query = {"_id": sim_id}
+    task_state = False
     demographic_profiles = None
     
-    while task_states is False:
+   
+    def update_batch_state(truth_value: bool):
+        request_object = database.find_one(request_object_query)
+        batch_states: dict = request_object["batch_states"]
+        batch_states[demgen_task_id] = truth_value
+        database.update_one(request_object_query, {"$set":{"batch_states": batch_states}})
+    
+    while task_state is False:
     
         try:
-            task_states = demgen.get_task_status(list([demgen_task_id]))
-            if task_states == True:
+            task_state = demgen.get_task_status(list([demgen_task_id]))
+            if task_state == True:
                 demographic_profiles = demgen.get_task_results(list([demgen_task_id]))
-            elif task_states == False:
+                break
+            elif task_state == False:
                 time.sleep(10)
-            else:
+            elif task_state == None:
                 traceback.print_exc()
-                query = {"_id": sim_id}
-                run_status = False
-                database.update_one(query, {"$set":{"Run Status": run_status}})
-                raise Exception("Demgen task failed.")  
+                update_batch_state(False)
+                raise Exception(f"Demgen task failed") 
+            else: 
+                traceback.print_exc()
+                update_batch_state(False)
+                raise Exception(f"Demgen task failed") 
             
         except Exception as e:
-            print(f"Demgen task error: {e}")
             #add function to delete the demgen task in demgen
             # demgen_client.delete_task(demgen_task_id)
             traceback.print_exc()
-            query = {"_id": sim_id}
-            run_status = False
-            database.update_one(query, {"$set":{"Run Status": run_status}})
-            raise Exception("Demgen task failed.")
+            update_batch_state(False)
+            raise Exception(f"Demgen task failed: {e}")
+    ###############################################
 
 
-    simulation_instances = [simulation.Simulator(survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
-    n_of_completed_runs = 0
+    simulation_instances = [simulation.Simulator(sim_id, survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
+    
+    
+    
     try:
         with ProcessPoolExecutor(max_workers = n_workers) as executor:
-            future_to_simulation = {executor.submit(sim.simulate): sim for sim in simulation_instances}
-            for future in as_completed(future_to_simulation):
-                n_of_completed_runs += 1
-                result = future.result()
-                query = {"_id": sim_id}
-                database.update_one(query, {"$push":{"Simulation Result": result}})
-                database.update_one(query, {"$inc":{"Completed Runs": 1}})
-                print(f"Completed {n_of_completed_runs} of {n_of_runs} runs.")
-                if n_of_completed_runs == n_of_runs:
-                    query = {"_id": sim_id}
-                    runs_total = database.find_one(query, "Number of Runs")
-                    runs_completed = database.find_one(query, "Completed Runs")
-                    if runs_total == runs_completed:
-                        run_status = False
-                        database.update_one(query, {"$set":{"Run Status": run_status}})
-                        print(f"All runs completed for simulation {sim_id}.")
-                        return True
-                    else:
-                        print(f"Task batch completed. Simulation {sim_id} has {runs_completed} of {runs_total} runs completed.")
-                        return True
+            tasks = [executor.submit(sim.simulate) for sim in simulation_instances]
+            for task in tasks:
+                task.result()
+            
+            #update request object     
+            total_timesteps = database.find_one(request_object_query)["total_timesteps"]
+            completed_timesteps = database.find_one(request_object_query)["completed_timesteps"]
+            progress = 100*(completed_timesteps/total_timesteps)
+            database.update_one(request_object_query, {"$set":{"progress": progress}})
+            
         
-                
+        print(f"batch {demgen_task_id} for simulation {sim_id} completed.")
+            
+
+
     except Exception as e:
-        print(f"Thread pool was unexpectedly terminated: {e}.")
         traceback.print_exc()
-        query = {"_id": sim_id}
-        run_status = False
-        database.update_one(query, {"$set":{"Run Status": run_status}})
-        raise Exception("Simulation failed.")
+        update_batch_state(False)
+        raise Exception(f"batch {demgen_task_id} for simulation {sim_id} failed: {e}.")
 
 
 
-#new function for batching inside running function
-# import rq
-# from app.redis_config import cache
-
-
-# queue = rq.Queue(name = 'sim_requests', connection = cache, default_timeout=7200)
-
-# def run(sim_id: str, survey: Dict, demographic_parameters: DemographicModel, agent_params: AgentParameters, n_of_runs: int,  n_workers: Optional[int]=5) -> bool:
-#     database = mongo_db.collection_simulations
-
-#     batch_size = 250
-#     if n_of_runs > batch_size:
-    
-#         n_of_batches = n_of_runs // batch_size
-#         remainder_batch_size = n_of_runs % batch_size
-#         request_batches = [i for i in [batch_size] * n_of_batches + [remainder_batch_size] if i != 0]
-#     else:
-#         request_batches = [n_of_runs]
-
-#     demographic_profiles = []
-#     for i, batch in enumerate(request_batches):
         
 
 
