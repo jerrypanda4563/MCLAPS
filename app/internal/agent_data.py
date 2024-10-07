@@ -170,13 +170,13 @@ class AgentData:
         if len(self.DataChunks) <= 1:
             pass
         else:
-            # for chunk in self.DataChunks[:-1]:
-            #     chunk.conjugate_vector = np.append(chunk.conjugate_vector, new_chunk.conjugate_vector[chunk.index])
+            for chunk in self.DataChunks[:-1]:
+                chunk.conjugate_vector = np.append(chunk.conjugate_vector, new_chunk.conjugate_vector[chunk.index])
             
-            #all chunks except the last one, i = 0,1,2 ... 
-            for i in range(len(self.DataChunks)-1):
-                ith_chunk = self.DataChunks[i]
-                ith_chunk.conjugate_vector = np.append(ith_chunk.conjugate_vector, new_chunk.conjugate_vector[i])
+            # #all chunks except the last one, i = 0,1,2 ... 
+            # for i in range(len(self.DataChunks)-1):
+            #     ith_chunk = self.DataChunks[i]
+            #     ith_chunk.conjugate_vector = np.append(ith_chunk.conjugate_vector, new_chunk.conjugate_vector[i])
 
 
 
