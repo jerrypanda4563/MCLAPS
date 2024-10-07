@@ -93,14 +93,29 @@ from rq.job import Job
 @application.get("/simulations/kill_all")
 async def kill_all():
     try:
-        job_ids = queue.job_ids  # Retrieve all job IDs in the queue
+        # Retrieve all job IDs in the queue (queued jobs)
+        job_ids = queue.job_ids
+        
+        # Cancel jobs in the queue
         for job_id in job_ids:
-            job = Job.fetch(job_id, connection=queue)
-            job.cancel()  # Cancel the job
+            job = Job.fetch(job_id, connection=queue.connection)
+            job.cancel()  # Cancel the queued job
+
+        # Get the registry of started jobs
+        registry = StartedJobRegistry(queue=queue)
+        started_job_ids = registry.get_job_ids()
+
+        # Cancel jobs that are currently started
+        for job_id in started_job_ids:
+            job = Job.fetch(job_id, connection=queue.connection)
+            if job.is_started:  # Check if the job is started
+                job.cancel()  # Cancel the started job
 
         # Optionally: You could also empty the queue after canceling all jobs
         queue.empty()
-        return {"message": "All tasks killed."}
+
+        return {"message": "All queued and started tasks killed."}
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
 
