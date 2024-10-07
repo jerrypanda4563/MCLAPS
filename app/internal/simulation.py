@@ -51,6 +51,7 @@ class Simulator():
             for i in range(self.retry_policy):
                 try: 
                     result = self.simulator.chat(current_iteration)
+                    print(result)
                     break
                 except (openai.error.ServiceUnavailableError, openai.error.Timeout, openai.error.RateLimitError) as e:
                     print(f'OpenAI error in simulation run for agent {self.simulator.agent_id} (Attempt {i + 1}): for question {_+1}. {e}')

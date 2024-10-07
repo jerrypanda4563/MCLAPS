@@ -8,7 +8,7 @@ import random
 import uuid
 import time
 import numpy as np
-
+import traceback
 import spacy
 from typing import List, Optional
 import openai
@@ -120,19 +120,10 @@ class Agent:
             except Exception as e:
                 return 1  # if fails, always stick with the current memory since max k is 1
         
-    def st_memory_length(self) -> int:
-        for i, memory_object in enumerate(self.st_memory):
-            if type(memory_object) != str:
-                print(f"Memory object is not string: {memory_object}")
-                raise Exception(f"Memory object index number {i} is not a string.")
-            
+    def st_memory_length(self) -> int:            
         return count_tokens(' '.join(self.st_memory))
     
-    def debug_st_memory(self) -> None:
-        for i, memory_object in enumerate(self.st_memory):
-            if type(memory_object) != str:
-                print(f"Memory object is not string: {memory_object}")
-                raise Exception(f"Memory object index number {i} is not a string.")
+
             
     
     ################
@@ -176,7 +167,11 @@ class Agent:
                     similarity_scores = list(executor.map(lambda x: self.evaluator(query_str, x), self.st_memory))
                 k = np.average(similarity_scores) #mean similarity to query
                 queried_memory = self.lt_memory.query(query_str, k)
-                self.st_memory = current_memory + queried_memory + random_memory
+                try:
+                    self.st_memory = current_memory + queried_memory + random_memory
+                except Exception as e:
+                    traceback.print_exc()
+                    raise Exception(f"Error in memory construction {e}, {type(current_memory)}, {type(queried_memory)}, {type(random_memory)}")
             else: 
                 #generates random memory along with current memory, ignores query
                 self.st_memory = current_memory + random_memory
@@ -246,7 +241,6 @@ class Agent:
     
     #interacted functions
     def chat(self, query:str) -> str:
-        self.debug_st_memory()
         self.construct_st_memory(query)   #changes system message 
         response: str = self.model_response(query)
         resoponse_chunked: list[str] = chunking.chunk_string(response, chunk_size = self.memory_chunk_size)
