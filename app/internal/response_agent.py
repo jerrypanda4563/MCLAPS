@@ -124,7 +124,7 @@ class Agent:
         for i, memory_object in enumerate(self.st_memory):
             if type(memory_object) != str:
                 print(f"Memory object is not string: {memory_object}")
-                raise ValueError(f"Memory object index number {i} is not a string.")
+                raise Exception(f"Memory object index number {i} is not a string.")
             
         return count_tokens(' '.join(self.st_memory))
     
@@ -132,7 +132,7 @@ class Agent:
         for i, memory_object in enumerate(self.st_memory):
             if type(memory_object) != str:
                 print(f"Memory object is not string: {memory_object}")
-                raise ValueError(f"Memory object index number {i} is not a string.")
+                raise Exception(f"Memory object index number {i} is not a string.")
             
     
     ################
