@@ -56,6 +56,7 @@ class Chunk(pydantic.BaseModel):
     def compute_conjugate_vector(self, chunk_embeddings: List[np.ndarray]) -> np.ndarray:
         conjugate_vector = np.array([])
         if len(chunk_embeddings) == 0:
+
             return np.array([0])
         else:
             embedding_vector_reshaped = self.embedding_vector.reshape(1, -1)
@@ -264,8 +265,12 @@ class AgentData:
             )
             self.DataChunks.append(chunk)
             chunk.compute_conjugate_vector([existing_chunk.embedding_vector for existing_chunk in self.DataChunks])
-    
-            self.update_conjugate_vectors(chunk)
+            debug_message = f"Chunk index: {chunk.index}, conjugate vector: {chunk.conjugate_vector}"
+            try:
+                self.update_conjugate_vectors(chunk)
+            except Exception as e:
+                print(f"Error in updating conjugate vectors: {e}, {debug_message}")
+                traceback.print_exc()
 
             return chunk
         
