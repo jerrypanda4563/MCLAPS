@@ -23,7 +23,11 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
     
     
     print("0")
-    database = mongo_db.database["requests"]
+    try:
+        database = mongo_db.database["requests"]
+    except Exception as e:
+        traceback.print_exc()
+        raise Exception(f"Database connection failed: {e}")
     request_object_query = {"_id": sim_id}
     task_state = False
     demographic_profiles = None
@@ -61,10 +65,13 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
             update_batch_state(False)
             raise Exception(f"Demgen task failed: {e}")
     ###############################################
-
     print("2")
-    simulation_instances = [simulation.Simulator(sim_id, survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
-    
+    try:
+        simulation_instances = [simulation.Simulator(sim_id, survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
+    except Exception as e:
+        traceback.print_exc()
+        update_batch_state(False)
+        raise Exception(f"Simulation instances failed: {e}")
     
     print("3")
     try:
