@@ -3,7 +3,12 @@ from app.data_models import SurveyModel, DemographicModel, AgentParameters
 import traceback
 from typing import Dict, List, Optional
 from app.internal.prompt_payloads import initialization_prompt, Iterator
-from app.mongo_config import database
+
+
+
+import app.settings as settings
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
 
 import json
 import openai.error
@@ -24,7 +29,6 @@ class Simulator():
         
         self.request_id = request_id
         self.simulator_id = str(uuid.uuid4())
-        self.database = database
 
         
 
@@ -43,15 +47,19 @@ class Simulator():
         
         self.retry_policy = retries
         
+    def initialize_database(self):
+        mongo=MongoClient(settings.MONGO_URI, server_api=ServerApi('1'))
+        db = mongo["simulations"]
+        db["requests"].insert_one({"_id": self.request_id, 
+                                "completed_runs": 0, 
+                                "completed_timesteps": 0, 
+                                "result_ids": [],
+                                "batch_states": {}})
+        return db
         
     def simulate(self) -> None:
-
-        self.database["results"].insert_one({"_id": self.simulator_id,
-                                "request_id": self.request_id, 
-                                "demographic": self.demographic, 
-                                "persona": self.persona, 
-                                "response_data": []})
         
+        database = self.initialize_database()
         result_object_query = {"_id": self.simulator_id}
         request_object_query = {"_id": self.request_id}
 
@@ -85,13 +93,13 @@ class Simulator():
                 schema["answer"] = None
                 break
             #pushing to result object based on json mode
-            self.database["results"].update_one(result_object_query, {"$push": {"response_data": schema}})
-            self.database["requests"].update_one(request_object_query, {"$inc": {"completed_timesteps": 1}})
+            database["results"].update_one(result_object_query, {"$push": {"response_data": schema}})
+            database["requests"].update_one(request_object_query, {"$inc": {"completed_timesteps": 1}})
             
 
         #updating request object once all iterations are completed
-        self.database["requests"].update_one(request_object_query, {"$inc":{"completed_runs": 1}})
-        self.database["requests"].update_one(request_object_query, {"$push": {"result_ids": self.simulator_id}})
+        database["requests"].update_one(request_object_query, {"$inc":{"completed_runs": 1}})
+        database["requests"].update_one(request_object_query, {"$push": {"result_ids": self.simulator_id}})
             
 
         
