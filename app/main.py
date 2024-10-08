@@ -182,7 +182,7 @@ async def new_simulation(sim_param: SimulationParameters):
         for request_batch in request_batches:
             task = queue.enqueue(
                 runner.run_simulation, 
-                args = (sim_id, request_batch[1], survey_object, agent_params, request_batch[0], n_of_workers), 
+                args = (sim_id, request_batch[1], survey_object, agent_params, n_of_workers), 
                 retry = rq.Retry(max=3, interval = 10), 
                 results_ttl = 7200, 
                 timeout = 7200)
@@ -192,34 +192,43 @@ async def new_simulation(sim_param: SimulationParameters):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=400,detail=f'Failed to initiate simulation task: {e}.') 
-        
-    request_batch_states: dict = {demgen_task_id: True for demgen_task_id in demgen_task_ids}
-    total_timesteps: int = n_of_runs * len(survey_object["questions"])
-    data_object: Dict = {
-        "_id":sim_id,
-        "batch_states": request_batch_states,
-        "name": survey_params.name,
-        "context": survey_params.context,
-        "iterations": [json.loads(question.json()) for question in survey_params.questions],
-        "demographic_sampling_conditions": json.loads(demographic_params.json()),
-        "n_of_runs": n_of_runs,
-        "completed_runs": 0,
-        "total_timesteps": total_timesteps,
-        "completed_timesteps": 0,
-        "run_status": True,
-        "progress": 0,
-        "result_ids": []
-    }
-    database = mongo_db.database["requests"]
-    database.insert_one(data_object)
+    
+    try:
+        request_batch_states: dict = {demgen_task_id: True for demgen_task_id in demgen_task_ids}
+        total_timesteps: int = n_of_runs * len(survey_object["questions"])
+        data_object: Dict = {
+            "_id":sim_id,
+            "batch_states": request_batch_states,
+            "name": survey_params.name,
+            "context": survey_params.context,
+            "iterations": [json.loads(question.json()) for question in survey_params.questions],
+            "demographic_sampling_conditions": json.loads(demographic_params.json()),
+            "n_of_runs": n_of_runs,
+            "completed_runs": 0,
+            "total_timesteps": total_timesteps,
+            "completed_timesteps": 0,
+            "run_status": True,
+            "progress": 0,
+            "result_ids": []
+        }
+        database = mongo_db.database["requests"]
+        database.insert_one(data_object)
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=400,detail=f'Failed to create simulation object in data: {e}.')
 
-    queued_jobs = queue.get_job_ids()
-    # Fetch started jobs, get queue positions of tasks
-    started_registry = rq.registry.StartedJobRegistry(queue=queue)
-    started_job_ids = started_registry.get_job_ids()
-    all_job_ids = queued_jobs + started_job_ids
-    job_position_map = {job_id: idx + 1 for idx, job_id in enumerate(all_job_ids)}
-    queue_positions = [job_position_map.get(task.id, -1) for task in tasks]
+    try:
+        queued_jobs = queue.get_job_ids()
+        # Fetch started jobs, get queue positions of tasks
+        started_registry = rq.registry.StartedJobRegistry(queue=queue)
+        started_job_ids = started_registry.get_job_ids()
+        all_job_ids = queued_jobs + started_job_ids
+        job_position_map = {job_id: idx + 1 for idx, job_id in enumerate(all_job_ids)}
+        queue_positions = [job_position_map.get(task.id, -1) for task in tasks]
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=400,detail=f'Failed to get job queue positions: {e}.')
+    
     return {"task_id": [task.id for task in tasks], "simulation_id": sim_id, "queue_position": queue_positions} 
         
 
@@ -228,7 +237,7 @@ async def new_simulation(sim_param: SimulationParameters):
 
 
 
-######### NEEDS UPDATE TO ACCOMODATE FOR NEW DATA STRUCTURE
+##works
 @application.get("/simulations/status")
 def sim_status(sim_id: str) -> Dict:
     if test.mongo_connection_test():
@@ -249,6 +258,8 @@ def sim_status(sim_id: str) -> Dict:
     else:
         raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
 
+
+######### NEEDS UPDATE TO ACCOMODATE FOR NEW DATA STRUCTURE
 @application.get("/simulations/load_simulation")
 async def load_simulation(sim_id: str) -> Dict:
     if test.mongo_connection_test():
