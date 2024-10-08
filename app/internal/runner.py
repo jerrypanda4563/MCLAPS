@@ -22,7 +22,7 @@ demgen = MclapsDemgenClient()
 def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params: AgentParameters, n_workers: Optional[int]=5) -> None:
     
     
-
+    print("0")
     database = mongo_db.database["requests"]
     request_object_query = {"_id": sim_id}
     task_state = False
@@ -35,6 +35,7 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
         batch_states[demgen_task_id] = truth_value
         database.update_one(request_object_query, {"$set":{"batch_states": batch_states}})
     
+    print("1")
     while task_state is False:
     
         try:
@@ -61,11 +62,11 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
             raise Exception(f"Demgen task failed: {e}")
     ###############################################
 
-
+    print("2")
     simulation_instances = [simulation.Simulator(sim_id, survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
     
     
-    
+    print("3")
     try:
         with ProcessPoolExecutor(max_workers = n_workers) as executor:
             tasks = [executor.submit(sim.simulate) for sim in simulation_instances]
@@ -80,7 +81,7 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
             
         
         print(f"batch {demgen_task_id} for simulation {sim_id} completed.")
-            
+        
 
 
     except Exception as e:
@@ -88,6 +89,8 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
         update_batch_state(False)
         raise Exception(f"batch {demgen_task_id} for simulation {sim_id} failed: {e}.")
 
+
+    print("4")
 
 
         
