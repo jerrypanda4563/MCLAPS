@@ -50,16 +50,17 @@ class Simulator():
     def initialize_database(self):
         mongo=MongoClient(settings.MONGO_URI, server_api=ServerApi('1'))
         db = mongo["simulations"]
-        db["requests"].insert_one({"_id": self.request_id, 
-                                "completed_runs": 0, 
-                                "completed_timesteps": 0, 
-                                "result_ids": [],
-                                "batch_states": {}})
         return db
         
     def simulate(self) -> None:
         
         database = self.initialize_database()
+        
+        database["results"].insert_one({"_id": self.simulator_id,
+                                  "request_id": self.request_id, 
+                                  "demographic": self.demographic, 
+                                  "persona": self.persona, 
+                                  "response_data": []})
         result_object_query = {"_id": self.simulator_id}
         request_object_query = {"_id": self.request_id}
 
