@@ -8,7 +8,6 @@ open_ai_models = Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview",
 
 class DemographicModel(BaseModel):
     sex_at_birth: Optional[str] = None
-    gender_identity: Optional[str] = None
     age: Optional[str] = None
     marital_status: Optional[str] = None
     sexual_orientation: Optional[str] = None
