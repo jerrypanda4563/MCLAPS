@@ -1,73 +1,76 @@
-import json
-import os
+import traceback
 import csv
-import pandas as pd
-from app.redis_config import cache
+
 from typing import Dict, List
+from tests.test import mongo_connection_test
+import app.mongo_config as mongo_db
+from fastapi import HTTPException
 
-def extract_json_content(s):
-    s=s.strip()
-    for i, char in enumerate(s):
-        if char == "[":
-            return s[i:s.rfind("]")+1]
-        elif char == "{":
-            return s[i:s.rfind("}")+1]
-    return None
+def load_simulation_json(sim_id: str) -> Dict:
+    if mongo_connection_test():
+        db = mongo_db.database
+    else:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Error connecting to database.")
+        
+    request_object_query = {"_id": sim_id}
+    request_object: dict = db["requests"].find_one(request_object_query)
+    result_ids: list[str] = request_object["result_ids"]
 
-def clean_up_csv(filename):
-    # Load the dataframe
-    df = pd.read_csv(filename)
+    result_object_queries = [{"_id": result_id} for result_id in result_ids]
+    result_objects: list[dict] = [db["results"].find_one(result_object_query) for result_object_query in result_object_queries]
 
-    # Remove unwanted characters
-    df = df.replace(to_replace =["\[","\]","\'", ""], value ="", regex = True)
+    return {
+        "simulation_id": sim_id,
+        "name": request_object["name"],
+        "context": request_object["context"],
+        "demographic_conditions": request_object["demographic_sampling_conditions"],
+        "iterations": request_object["iterations"],
+        "n_of_runs": request_object["n_of_runs"],
+        "results": result_objects
+    }
 
-    # Save the cleaned dataframe
-    df.to_csv(filename, index=False)
 
-def create_csv_from_simulation_results(sim_data, file_path= "./simulations"):
 
-    data=sim_data
-    survey_id = data.get("_id", "Survey")
-    try:
-        simulation_results = data.get('Simulation Result', [])
-    except Exception as e:
-        print("Old file format detected. Attempting to extract simulation results from the file.")
-        simulation_results = [json.loads(data) for data in sim_data["Simulation Result"]]
 
-    # File name using the survey_id
-    file_name = f"{file_path}/{survey_id}_Simulation_Results.csv"
+def load_simulation_csv(sim_id: str, file_path: str) -> str:
+    data = load_simulation_json(sim_id)
+    simulation_id: str = data["simulation_id"]
+    simulation_name: str = data["survey_name"]
+    iteration_questions: list[dict] = data["iterations"]
+    simulation_results: list[dict] = data["results"]
 
-    # Open a file to write
+    file_name = f"{file_path}/{simulation_id}_{simulation_name}_results.csv"
     with open(file_name, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
 
-        # Write headers
-        headers_written = False
+        column_names = []
+
+        demographic_fields: list[str] = list(data["demographic_conditions"].keys())
+        question_fields: list[str] = [iteration_question["question"] for iteration_question in iteration_questions]
+
+        column_names.extend(demographic_fields)
+        column_names.append("persona")
+        column_names.extend(question_fields)
+
+        writer = csv.DictWriter(file, fieldnames=column_names)
+        writer.writeheader()
+
+
+        #result object schema
+        # {"_id": self.simulator_id,
+        # "request_id": self.request_id, 
+        # "demographic": self.demographic, 
+        # "persona": self.persona, 
+        # "response_data": []}
         for result in simulation_results:
-            # Load the JSON string
-            result_data = result
+            result_dict: dict = {}
+            demographic_dict: dict = result["demographic"]
+            result_dict.update(demographic_dict)
+            persona_dict:dict = {"persona": result["persona"]}
+            result_dict.update(persona_dict)
+            response_dict: dict = {response["question"]:response["answer"] for response in result["response_data"]}
+            result_dict.update(response_dict)
+            writer.writerow(result_dict)
 
-            # Extract response data
-            response_data = result_data.get('response_data', [])
-            demographic_data = result_data.get('demographic_data', {})
-
-            # Combine response and demographic data
-            combined_data = {**demographic_data}
-            for response in response_data:
-                key = response['question']
-                answer = response.get('answer', 'N/A')
-                combined_data[key] = answer
-
-            # Write headers if not yet written
-            if not headers_written:
-                headers = list(combined_data.keys())
-                writer.writerow(headers)
-                headers_written = True
-
-            # Write data
-            writer.writerow(combined_data.values())
 
     return file_name
-
-
-

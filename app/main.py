@@ -7,7 +7,7 @@ from app.data_models import SimulationParameters, SurveyModel
 import app.api_clients.mclapsrl as mclapsrl
 
 from tests import test
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
@@ -137,7 +137,7 @@ async def new_simulation(sim_param: SimulationParameters):
         print("database connection successful.")
     else:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
+        raise HTTPException(status_code=500, detail="Error connecting to database.")
 
     sim_id = str(uuid.uuid4())
     n_of_runs=sim_param.n_of_runs
@@ -259,43 +259,42 @@ def sim_status(sim_id: str) -> Dict:
         raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
 
 
-######### NEEDS UPDATE TO ACCOMODATE FOR NEW DATA STRUCTURE
-@application.get("/simulations/load_simulation")
-async def load_simulation(sim_id: str) -> Dict:
-    if test.mongo_connection_test():
-        database = mongo_db.collection_simulations
-        obj: Dict = database.find_one({"_id": sim_id})
-        if obj:
-            return obj
-        else:
-            raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
-    else:
-        raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
-    
-        
-@application.get("/simulations/load_simulation/csv")
-async def load_simulation_csv(sim_id: str, file_path = "./simulations"):
-    if test.mongo_connection_test():
-        print("MongoDB connection successful.")
-        database = mongo_db.collection_simulations
-        obj: Dict = database.find_one({"_id": sim_id})
-        if obj:    
-            try:
-                data_services.create_csv_from_simulation_results(sim_data=obj)
-                file_path = f"{file_path}/{sim_id}_Simulation_Results.csv"
-                survey_name: str = obj["Survey Name"]
 
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Error creating CSV file: {e}")
-            if not os.path.isfile(file_path):
-                raise HTTPException(status_code=404, detail="CSV file not found.")
-            
-            return FileResponse(path=file_path, media_type='text/csv', filename=f"{survey_name}_{sim_id}_Simulation_Results.csv")
-        
-        else:
-            raise HTTPException(status_code=404, detail=f"Simulation with ID {sim_id} doesn't exist, please create simulation first.")
+
+## result obj and req obj schema ref
+# {
+#             "_id":sim_id,
+#             "batch_states": request_batch_states,
+#             "name": survey_params.name,
+#             "context": survey_params.context,
+#             "iterations": [json.loads(question.json()) for question in survey_params.questions],
+#             "demographic_sampling_conditions": json.loads(demographic_params.json()),
+#             "n_of_runs": n_of_runs,
+#             "completed_runs": 0,
+#             "total_timesteps": total_timesteps,
+#             "completed_timesteps": 0,
+#             "run_status": True,
+#             "progress": 0,
+#             "result_ids": []
+#         }
+
+@application.get("/simulations/load_simulation")
+async def load_simulation(sim_id: str, csv: Optional[bool] = True):
+    simulation_json = data_services.load_simulation_json(sim_id)
+    if csv:
+        file_path = "./simulations"
+        file = data_services.load_simulation_csv(sim_id, file_path)
+        return FileResponse(file)
     else:
-        raise HTTPException(status_code=500, detail="Error connecting to MongoDB.")
+        return simulation_json
+        
+  
+
+
+
+
+
+
        
 
 
