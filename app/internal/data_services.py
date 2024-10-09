@@ -36,7 +36,7 @@ def load_simulation_json(sim_id: str) -> Dict:
 def load_simulation_csv(sim_id: str, file_path: str) -> str:
     data = load_simulation_json(sim_id)
     simulation_id: str = data["simulation_id"]
-    simulation_name: str = data["survey_name"]
+    simulation_name: str = data["name"]
     iteration_questions: list[dict] = data["iterations"]
     simulation_results: list[dict] = data["results"]
 
