@@ -3,15 +3,15 @@ from app.internal import runner
 from app.internal import data_services
 import app.mongo_config as mongo_db
 from app.redis_config import cache 
-from app.data_models import SimulationParameters, SurveyModel
+from app.data_models import SimulationParameters, OpenAIModels
 import app.api_clients.mclapsrl as mclapsrl
-
+from app.api_clients.mclaps_demgen import MclapsDemgenClient, DemgenRequest
 from tests import test
 from typing import Dict, List, Optional
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.responses import FileResponse
-import os
+from rq.registry import FinishedJobRegistry, StartedJobRegistry, FailedJobRegistry
 import json
 
 import rq
@@ -30,6 +30,7 @@ import traceback
 demgen_client = MclapsDemgenClient()
 application = FastAPI()
 queue = rq.Queue(name = 'sim_requests', connection = cache, default_timeout=7200)
+openai_models = OpenAIModels()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ async def test_services():
 
 
            
-from rq.registry import FinishedJobRegistry, StartedJobRegistry, FailedJobRegistry
+
 
 @application.get("/simulations/all_tasks")
 async def all_tasks():
@@ -127,17 +128,22 @@ async def clear_queue():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
 
-from app.api_clients.mclaps_demgen import MclapsDemgenClient, DemgenRequest
+
 @application.post("/simulations/new_simulation")
 async def new_simulation(sim_param: SimulationParameters):
     
-    #unwraps simulation parameters
-    
+    if openai_models.check_model(sim_param.agent_params.agent_model) == False:
+        raise HTTPException(status_code=400, detail=f"Model {sim_param.agent_params.agent_model} invalid, available models: {openai_models.list_models()}")
+    if openai_models.check_model(sim_param.agent_params.embedding_model) == False:
+        raise HTTPException(status_code=400, detail=f"Model {sim_param.agent_params.embedding_model} invalid, available models: {openai_models.list_models()}")
+
     if test.mongo_connection_test():
         print("database connection successful.")
     else:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail="Error connecting to database.")
+    
+
 
     sim_id = str(uuid.uuid4())
     n_of_runs=sim_param.n_of_runs
@@ -145,7 +151,6 @@ async def new_simulation(sim_param: SimulationParameters):
     survey_params=sim_param.survey_params
     demographic_params=sim_param.demographic_params
     agent_params=sim_param.agent_params
-    
     survey_object: dict = survey_params.dict()
 
 

@@ -11,8 +11,6 @@ redis
 python-multipart
 uvicorn
 pytest
-celery
-spacy
 tiktoken
 rq
 

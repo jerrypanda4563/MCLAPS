@@ -1,10 +1,29 @@
 from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Union, Literal, ClassVar
 import datetime
+import openai
+from app import settings
+
+openai.api_key = settings.OPEN_AI_KEY
 
 
 
-open_ai_models = Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-4o", "gpt-4o-mini", "text-embedding-3-small", "text-embedding-3-large" ]
+
+class OpenAIModels():
+    def __init__(self):
+        self.response_models = openai.Engine.list(models = True)
+        
+
+    def check_model(self, model: str):
+        open_ai_models = [data_object["id"] for data_object in self.response_models["data"]]
+        if model not in open_ai_models:
+            return False
+        return True
+
+    def list_models(self):
+        open_ai_models = [data_object["id"] for data_object in self.response_models["data"]]
+        return open_ai_models
+    
 
 class DemographicModel(BaseModel):
     sex_at_birth: Optional[str] = None
@@ -61,7 +80,8 @@ class DemographicModel(BaseModel):
     class Config:
         extra = "forbid"  # Forbids any extra fields not defined in the model
 
-#survey_validation
+
+
 
 class MultipleChoiceQuestion(BaseModel):
     type: str = Field("multiple choice", Literal=True)
@@ -130,8 +150,8 @@ class SurveyModel(BaseModel):
 
 class AgentParameters(BaseModel):
 
-    agent_model: Optional[Literal["gpt-3.5-turbo", "gpt-4-turbo", "gpt-4-vision-preview", "gpt-4o", "gpt-4o-mini"]] = "gpt-3.5-turbo"
-    embedding_model: Optional[Literal["text-embedding-3-small", "text-embedding-3-large"]] = "text-embedding-3-small"
+    agent_model: Optional[str] = "gpt-3.5-turbo"
+    embedding_model: Optional[str] = "text-embedding-3-small"
     llm_temperature: Optional[float] = 1.21  #for the llm temp
     agent_temperature: Optional[float] = 0.1   #between 0 and 1, if 1 means that the agent is erratic and nuts
     existance_date: Optional[str] = datetime.date.today().isoformat()

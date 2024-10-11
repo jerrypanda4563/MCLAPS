@@ -2,35 +2,24 @@ import openai.error
 from app.internal import chunking
 
 from app import settings
-import time
 
 
 from sklearn.metrics.pairwise import cosine_similarity as cs
-from openai import Embedding
 import openai
 import numpy as np
 from typing import Dict, List, Optional, Literal
 import pydantic
-import uuid
-import random
 import traceback
 import spacy
 from concurrent.futures import ThreadPoolExecutor
 from app.api_clients.mclapsrl import mclapsrlClient
+from app.internal.embedding_request import embed
 
 
 nlp = spacy.load("en_core_web_sm")
 rate_limiter = mclapsrlClient()
 
 openai.api_key = settings.OPEN_AI_KEY
-
-
-
-
-    
-
-
-    
 
 
 
@@ -94,7 +83,7 @@ class Chunk(pydantic.BaseModel):
 
 
 class AgentData:
-    #max_memory_size as a initialization param
+
     def __init__(self, 
                  memory_limit: int, 
                  chunk_size: int, 
@@ -115,46 +104,8 @@ class AgentData:
         self.query_sampling_n: int = sampling_top_n
         self.reconstruction_sampling_n: int = reconstruction_top_n
         self.reconstruction_trigger_length: int = round(reconstruction_trigger_factor * memory_limit)  #in n. of chunks
-        self.loss_factor: float = memory_loss_factor ############!!!!!!!!!!!!!!!!!!!not a param yet
-        self.dimension: int = embedding_dim############!!!!!!!!!!!!!!!!!!!not a param yet
-
-    #return none if embedding failed
-    def embed_large_text(self, text: str) -> np.ndarray:
-        
-        def normalize_l2(x):
-            x = np.array(x)
-            if x.ndim == 1:
-                norm = np.linalg.norm(x)
-                if norm == 0:
-                    return x
-                return x / norm
-            else:
-                norm = np.linalg.norm(x, 2, axis=1, keepdims=True)
-                return np.where(norm == 0, x, x / norm)
-            
-        while rate_limiter.model_status(self.embedding_model) == False:
-            time.sleep(2)
-            continue
-        retries = 5
-        while retries > 0:
-            try:
-                response=Embedding.create(
-                    model = self.embedding_model,
-                    input=str(text)
-                    )
-                rate_limiter.new_response(response)
-                embedding = np.array(normalize_l2(response['data'][0]['embedding'][:self.dimension]))
-                return embedding
-            except (openai.error.OpenAIError, openai.error.Timeout, openai.error.ServiceUnavailableError, openai.error.RateLimitError) as e:
-                print(f"Error while embedding in agent data: {e}")
-                traceback.print_exc()
-                retries -= 1
-                time.sleep(5)
-                continue
-        else: 
-            print(f"Failed to embed text: {text}")
-            traceback.print_exc()
-            return np.zeros(self.dimension) 
+        self.loss_factor: float = memory_loss_factor 
+        self.dimension: int = embedding_dim
         
     def isotropic_rescaler(self, value: float) -> float:
         rescaled_value = (value + 1)/2
@@ -182,6 +133,13 @@ class AgentData:
             #     ith_chunk = self.DataChunks[i]
             #     ith_chunk.conjugate_vector = np.append(ith_chunk.conjugate_vector, new_chunk.conjugate_vector[i])
 
+    def embed_string(self, input_string: str) -> np.ndarray:
+        embedding = embed(
+            input_string, 
+            dimension = self.dimension, 
+            embedding_model = self.embedding_model
+            )
+        return embedding
 
     #quick check to see if there is anything more related in database
     def L0_query(self, query_string:str) -> Optional[List[int]]:
@@ -189,7 +147,7 @@ class AgentData:
             return [0]
         else:
             try:
-                query_embedding = self.embed_large_text(query_string)
+                query_embedding = self.embed_string(query_string)
                 query_conjugate_vector = self.compute_conjugate_vector(query_embedding)
                 top_1: List[int] = sorted(query_conjugate_vector.tolist(),reverse=True)[0:1]
                 return top_1
@@ -211,7 +169,7 @@ class AgentData:
         
         else:
             try:
-                query_embedding = self.embed_large_text(query_string)
+                query_embedding = self.embed_string(query_string)
                 query_conjugate_vector = self.compute_conjugate_vector(query_embedding)
                 top_n = sorted(enumerate(query_conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:self.query_sampling_n]    ###top 5 chunks identified through query similarity
                 target_chunk_list = [self.DataChunks[index] for index, _ in top_n]
@@ -273,7 +231,7 @@ class AgentData:
         try:
             list_of_chunked_str: List[str] = chunking.chunk_string(input_string, chunk_size = self.chunk_size)
             with ThreadPoolExecutor(max_workers=len(list_of_chunked_str)) as executor:
-                list_of_chunk_embeddings: List[np.ndarray] = list(executor.map(self.embed_large_text, list_of_chunked_str))
+                list_of_chunk_embeddings: List[np.ndarray] = list(executor.map(self.embed_string, list_of_chunked_str))
             for string, embedding in zip(list_of_chunked_str, list_of_chunk_embeddings):
                 add_chunk(string, embedding)
             self.resturcture_memory()
@@ -301,13 +259,13 @@ class AgentData:
             
 
  # datastr = input_string
-            # datastr_embedding = self.embed_large_text(input_string)
+            # datastr_embedding = self.embed_string(input_string)
             # datastr_uuid = uuid.uuid4()
             # datastr_chunked = chunking.chunk_string(input_string, chunk_size = self.chunk_size)
             
             # list_of_chunk_embeddings: List[np.ndarray] = []
             # with ThreadPoolExecutor(max_workers=len(datastr_chunked)) as executor:
-            #     list_of_chunk_embeddings = list(executor.map(self.embed_large_text, datastr_chunked))
+            #     list_of_chunk_embeddings = list(executor.map(self.embed_string, datastr_chunked))
 
             # list_of_chunks: List[Chunk] = []    
             # for string, embedding in zip(datastr_chunked, list_of_chunk_embeddings):

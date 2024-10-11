@@ -1,34 +1,15 @@
 import requests
 from app import settings
-from pydantic import BaseModel
-from app.data_models import open_ai_models
+from app.data_models import OpenAIModels
+import time
+
+openai_models = OpenAIModels()
 
 
-
-
-def model_filter(model: str) -> open_ai_models:
-    if "gpt-3.5-turbo" in model:
-        return "gpt-3.5-turbo"
-    if "gpt-4-turbo" in model:
-        return "gpt-4-turbo"
-    if "gpt-4-0125-preview" in model:
-        return "gpt-4-turbo"
-    if "gpt-4o" in model:
-        return "gpt-4o"
-    if "gpt-4o-mini" in model:
-        return "gpt-4o-mini"
-    if "gpt-4-1106-preview" in model:
-        return "gpt-4-turbo"
-    if "text-embedding-3-small" in model:
-        return "text-embedding-3-small"
-    if "text-embedding-3-large" in model:
-        return "text-embedding-3-large"
-    else:
-        return model
-
+#parses the response body from openai generator object to a dictionary
 def parse_response(response) -> dict:
     try:
-        model = model_filter(response.model)
+        model = response.model
     except AttributeError:
         model = None
     try:
@@ -43,6 +24,7 @@ def parse_response(response) -> dict:
         total_tokens = response.usage.total_tokens
     except AttributeError:
         total_tokens = 0
+    
     parsed_json = {
         "model": model,
         "input_tokens": input_tokens,
@@ -57,22 +39,11 @@ class mclapsrlClient:
         self.base_url = settings.MCLAPSRL_API
         self.headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
 
-    def check_service_status(self) -> dict:
-        response_root = (requests.get(f"{self.base_url}/")).json()
-        response_redis = (requests.get(f"{self.base_url}/redis_connection")).json()
-        mclapsrl_status = {
-            "root_status": response_root,
-            "redis_status": response_redis
-        }
-        return mclapsrl_status
-
-    def get_counter_status(self, model: open_ai_models):
+    #redundant not used in here
+    def get_counter_status(self, model: str) -> dict:
         response = requests.get(f"{self.base_url}/counter_status", params={'model': model})
         return response.json()
-
-
-    #post
-    def create_counter(self, model: open_ai_models) -> bool:
+    def create_counter(self, model: str) -> bool:
         attempts = 10
         while attempts > 0:
             try:
@@ -85,9 +56,18 @@ class mclapsrlClient:
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
                 print(f"Error in mclapsrl connection: {e}, retrying  ({attempts} attempts remaining).")
                 attempts -= 1
-            
         return False
     
+
+
+    def check_service_status(self) -> dict:
+        response_root = (requests.get(f"{self.base_url}/")).json()
+        response_redis = (requests.get(f"{self.base_url}/redis_connection")).json()
+        mclapsrl_status = {
+            "root_status": response_root,
+            "redis_status": response_redis
+        }
+        return mclapsrl_status
 
     #post
     def new_response(self, response) -> bool:
@@ -111,10 +91,28 @@ class mclapsrlClient:
                 break #breaks loop if request exception occurs
 
         return False
+    
+    
+
+    def model_break(self, model: str, break_time: int) -> bool:
+        attempts = 10
+        while attempts > 0:
+            try:
+                response = (requests.post(f"{self.base_url}/model_break", headers = self.headers, json = {'model':model, 'break_time': break_time})).json()  # returns true false for whether counter updated
+                if response == True:
+                    return True
+                else:
+                    print(f"Counter update failed for model {model}, retrying  ({attempts} attempts remaining).")
+                    attempts -= 1
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+                print(f"Error in mclapsrl connection: {e}, retrying  ({attempts} attempts remaining).")
+                attempts -= 1
+                time.sleep(2)
+        return False
 
 
     #returns boolean status of model, or false if client is down, so if client is down the simulation halts indefinitely
-    def model_status(self, model: open_ai_models) -> bool:      
+    def model_status(self, model: str) -> bool:      
         attempts = 10
         while attempts > 0:
             try:
@@ -122,9 +120,12 @@ class mclapsrlClient:
                 return response.json()
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
                 print(f"Error in mclapsrl connection: {e}, retrying ({attempts} attempts remaining).")
+                time.sleep(5)
                 attempts -= 1
         
         return False
+    
+
 
 
 

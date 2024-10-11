@@ -4,7 +4,6 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Literal
 import pydantic
 from app.api_clients.mclapsrl import mclapsrlClient
-from app.data_models import open_ai_models
 import time
 import openai
 from openai.error import OpenAIError, Timeout, ServiceUnavailableError, RateLimitError
@@ -193,9 +192,9 @@ class AgentData:
                  agent_id: str,
                  max_memory: int,
                  chunk_size: int,
-                 top_n_sampling: int)
+                 top_n_sampling: int):
         
-        if len(chunks) < pca_threshold:
+        
         
 
         self.dimension = n_dim

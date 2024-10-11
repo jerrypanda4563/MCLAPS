@@ -17,6 +17,8 @@ from sklearn.metrics.pairwise import cosine_similarity as cs
 from concurrent.futures import ThreadPoolExecutor
 from app.data_models import AgentParameters
 import gc
+from app.internal.embedding_request import embed
+from app.internal.model_request import model_response
 
 openai.api_key = settings.OPEN_AI_KEY
 
@@ -33,6 +35,7 @@ class Agent:
         ######
         # self.agent_id = str(uuid.uuid4()) #unique id for agent
         ######
+
         self.lt_memory = agent_data.AgentData(
             memory_limit = params.memory_limit, 
             chunk_size = round(params.chunk_size/(params.reconstruction_top_n + 1)), 
@@ -65,65 +68,22 @@ class Agent:
     
 
     #add limiter
-    def embed(self, string:str) -> np.ndarray:
+    def embed_string(self, string:str) -> np.ndarray:
+        embedding = embed(string, embedding_model = self.embedding_model, dimension = self.embedding_dimension)
+        return embedding
 
-        def normalize_l2(x):
-            x = np.array(x)
-            if x.ndim == 1:
-                norm = np.linalg.norm(x)
-                if norm == 0:
-                    return x
-                return x / norm
-            else:
-                norm = np.linalg.norm(x, 2, axis=1, keepdims=True)
-                return np.where(norm == 0, x, x / norm)
-            
-        while rate_limiter.model_status(self.embedding_model) == False:
-            time.sleep(2)
-        retries = 5
-        while retries > 0:
-            try:
-                response=openai.Embedding.create(
-                    model = self.embedding_model,
-                    input=str(string)
-                    )
-
-                rate_limiter.new_response(response)
-                embedding = np.array(normalize_l2(response['data'][0]['embedding'][:self.embedding_dimension]))
-                return embedding
-            except (OpenAIError, Timeout, ServiceUnavailableError, RateLimitError) as e:
-                print(f"Error while embedding in response agent: {e}")
-                retries -= 1
-                time.sleep(5)
-                continue
-            # except RateLimitError as e:
-            #     print(f"Rate limit error serverside: {e}")
-            #     rate_limiter.
-            #     time.sleep(5)
-        else:
-            print(f"Warning: zero vector returned for string {string}")
-            return np.zeros(self.embedding_dimension)
-            
         
-
     def evaluator(self, string1:str, string2:str) -> float:
-        try:
-            k = cs(self.embed(string1).reshape(1,-1),self.embed(string2).reshape(1,-1))[0][0]
+        string_1_embedding = self.embed_string(string1)
+        string_2_embedding = self.embed_string(string2)
+        k = cs(string_1_embedding.reshape(1,-1),string_2_embedding.reshape(1,-1))[0][0]
+        if k: 
             return k
-        except Exception as e:
-            try:
-                v_1=np.array(nlp(string1).vector)
-                v_2=np.array(nlp(string2).vector)
-                k_backup = cs(v_1.reshape(1,-1),v_2.reshape(1,-1))[0][0]
-                return k_backup  
-            except Exception as e:
-                return 1  # if fails, always stick with the current memory since max k is 1
+        else:
+            return 1  # if fails, always stick with the current memory since max k is 1
         
     def st_memory_length(self) -> int:            
         return count_tokens(' '.join(self.st_memory))
-    
-
-            
     
     ################
     #can potentially be added with random generation of memory based on initialization data
@@ -145,9 +105,6 @@ class Agent:
                 return memory_strings
         
     ###################
-
-
-    
 
     def construct_st_memory(self, query_str: str) -> None:
         try:
@@ -197,61 +154,33 @@ class Agent:
         self.lt_memory.add_data_str(new_lt_memory_joined)
             
 
-    #add limiter
-    def model_response(self, query: str) -> str:
+    def llm_request(self, query: str):
         memory_prompt = "You recall the following pieces of information:\n" + '\n'.join(self.st_memory) 
-        
-        #json mode
-        if self.json_mode == True:
-            while rate_limiter.model_status(self.llm_model) == False:
-                time.sleep(2)
-            completion = openai.ChatCompletion.create(
-                    model = self.llm_model,
-                    response_format={"type": "json_object"},
-                    messages=[
-                            {"role": "system", "content": self.instruction + "\n" + memory_prompt + "\n" + f"The current date is {self.existence_date}"},
-                            {"role": "user", "content": query},
-                        ],
-                    temperature=self.model_temperature,
-                    max_tokens=self.max_output_length,
-                    n=1  
-                    )
- 
-            rate_limiter.new_response(completion)
-            response = completion.choices[0].message.content
-            return response
-        
-        #non-json mode
-        else:
-            while rate_limiter.model_status(self.llm_model) == False:
-                time.sleep(2)
-            completion=openai.ChatCompletion.create(
-                    model = self.llm_model,
-                    messages=[
-                            {"role": "system", "content": self.instruction + "\n" + memory_prompt + "\n" + f"The current date is {self.existence_date}"},
-                            {"role": "user", "content": query},
-                        ],
-                    temperature=self.model_temperature,
-                    max_tokens=self.max_output_length,
-                    n=1  
-                    )
-            rate_limiter.new_response(completion)
-            response=completion.choices[0].message.content
-            return response
+        system_prompt = self.instruction + f"The current timestamp is {self.existence_date}"
+        response = model_response(
+            query_message = query, 
+            assistant_message=memory_prompt, 
+            system_message = system_prompt,
+            model_name = self.llm_model,
+            json_mode = self.json_mode,
+            temperature = self.model_temperature,
+            response_length = self.max_output_length 
+            )
+        return response
+
+    
     
     
     #interacted functions
     def chat(self, query:str) -> str:
         self.construct_st_memory(query)   #changes system message 
-        response: str = self.model_response(query)
+        response: str = self.llm_request(query)
         resoponse_chunked: list[str] = chunking.chunk_string(response, chunk_size = self.memory_chunk_size)
         self.st_memory.extend(resoponse_chunked)
         if self.st_memory_length() > self.st_memory_capacity:
             self.restructure_memory(query)
         return response
     
-
-
 
     ####************ 
     def inject_memory(self, string: str) -> None:
