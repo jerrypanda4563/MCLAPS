@@ -71,7 +71,7 @@ async def demgen_test():
         endpoint_status.append({"demgen_request": False})
     
     try: 
-        demgen_client.get_task_status(response["task_id"][0])
+        demgen_client.get_task_status(response["task_ids"][0])
         endpoint_status.append({"get_task_status": True})   
     except Exception as e:
         traceback.print_exc()
@@ -79,7 +79,7 @@ async def demgen_test():
         endpoint_status.append({"get_task_status": False})
 
     try:
-        demgen_client.get_task_results(response["task_id"][0])        
+        demgen_client.get_task_results(response["task_ids"][0])        
         endpoint_status.append({"get_task_results": True})
     except Exception as e:
         traceback.print_exc()
