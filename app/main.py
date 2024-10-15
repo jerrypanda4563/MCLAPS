@@ -9,7 +9,7 @@ from app.api_clients.mclaps_demgen import MclapsDemgenClient, DemgenRequest
 from tests import test
 from typing import Dict, List, Optional
 
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from rq.registry import FinishedJobRegistry, StartedJobRegistry, FailedJobRegistry
 import json
@@ -40,7 +40,61 @@ logger = logging.getLogger(__name__)
 async def root():
     return{"API Connection": "Success!"}
 
+from app.data_models import DemographicModel
+@application.get("/demgen_test")
+async def demgen_test():
+    endpoint_status = []
 
+    try: 
+        demgen_client.read_root()
+        endpoint_status.append({"read_root": True})
+    except Exception as e:
+        traceback.print_exc()
+        print(f"Root Error: {e}")
+        endpoint_status.append({"read_root": False})
+
+    try:
+        demgen_client.array_status()
+        endpoint_status.append({"array_status": True})
+    except Exception as e:
+        traceback.print_exc()
+        print (f"Array Error: {e}")
+        endpoint_status.append({"array_status": False})
+
+
+    try:
+        response = demgen_client.demgen_request(DemgenRequest(number_of_samples=1, batch_size=250, sim_id = str(uuid.uuid4()), sampling_conditions = DemographicModel()))
+        endpoint_status.append({"demgen_request": True})
+    except Exception as e:
+        traceback.print_exc()
+        print(f"Demgen Request Error: {e}")
+        endpoint_status.append({"demgen_request": False})
+    
+    try: 
+        demgen_client.get_task_status(response["task_id"][0])
+        endpoint_status.append({"get_task_status": True})   
+    except Exception as e:
+        traceback.print_exc()
+        print(f"Get Task Status Error: {e}")
+        endpoint_status.append({"get_task_status": False})
+
+    try:
+        demgen_client.get_task_results(response["task_id"][0])        
+        endpoint_status.append({"get_task_results": True})
+    except Exception as e:
+        traceback.print_exc()
+        print(f"Get Task Results Error: {e}")
+        endpoint_status.append({"get_task_results": False})
+
+    try:
+        demgen_client.get_dataset(response["dataset_id"])
+        endpoint_status.append({"get_dataset": True})
+    except Exception as e:
+        traceback.print_exc()
+        print(f"Get Dataset Error: {e}")
+        endpoint_status.append({"get_dataset": False})
+    
+    return endpoint_status
 
 @application.get("/connection_test")
 async def test_services():
@@ -114,8 +168,10 @@ async def kill_all():
 
         # Optionally: You could also empty the queue after canceling all jobs
         queue.empty()
+        demgen_client = MclapsDemgenClient()
+        demgen_client.kill_all_task()
 
-        return {"message": "All queued and started tasks killed."}
+        return {"message": "All queued and started tasks killed in main simulation and agent generation."}
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing tasks: {e}")
@@ -144,7 +200,7 @@ async def new_simulation(sim_param: SimulationParameters):
         raise HTTPException(status_code=500, detail="Error connecting to database.")
     
 
-
+    simulation_batch_size = 250
     sim_id = str(uuid.uuid4())
     n_of_runs=sim_param.n_of_runs
     n_of_workers=sim_param.workers
@@ -157,7 +213,7 @@ async def new_simulation(sim_param: SimulationParameters):
     #############send demgen request here
     demgen = MclapsDemgenClient()
     try:
-        demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, sim_id = sim_id, sampling_conditions = demographic_params))
+        demgen_task = demgen.demgen_request(DemgenRequest(number_of_samples=n_of_runs, batch_size=simulation_batch_size, sim_id = sim_id, sampling_conditions = demographic_params))
         print(f"Demgen request successful: {demgen_task}")
     except Exception as e:
         print(f"Demgen request failed: {e}")

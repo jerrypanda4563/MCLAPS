@@ -181,6 +181,7 @@ class SimulationParameters(BaseModel):
     survey_params: SurveyModel
     agent_params: AgentParameters
     n_of_runs: int
+    batch_size: Optional[int] = 250
     workers: Optional[int] = 10
 
     MAX_WORKERS: ClassVar[int] = 50

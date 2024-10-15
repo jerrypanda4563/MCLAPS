@@ -8,6 +8,7 @@ from app.settings import MCLAPS_DEMGEN_API
 
 class DemgenRequest(BaseModel):
     number_of_samples: int
+    batch_size: int
     sim_id: str
     sampling_conditions: DemographicModel
 
@@ -19,64 +20,40 @@ class MclapsDemgenClient:
         self.base_url = MCLAPS_DEMGEN_API
         self.headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
 
+    def array_status(self) -> dict:
+        response = requests.get(f"{self.base_url}/data_arr_status", headers=self.headers)
+        return response.json()
+            
     def read_root(self) -> dict:
         response = requests.get(f"{self.base_url}/")
         return response.json()
     
+    def reinitialize(self) -> dict:
+        response = requests.get(f"{self.base_url}/data_reset", headers=self.headers)
+        return response.json()
+    
     def service_status(self) -> dict:
-        response = requests.get(f"{self.base_url}/test_services")
+        response = requests.get(f"{self.base_url}/test_services", headers=self.headers)
+        return response.json()
+    
+    def kill_all_task(self) -> bool:
+        response = requests.get(f"{self.base_url}/kill_all", headers=self.headers)
         return response.json()
     
     def demgen_request(self, request_body: DemgenRequest) -> dict:
         response = requests.post(f"{self.base_url}/demgen/request", headers=self.headers, json = request_body.dict())
         return response.json()
     
-    def get_task_status(self, task_ids: list[str]) -> bool:
-        retries = 10
-        while retries > 0:
-
-            try:
-                response = requests.get(f"{self.base_url}/demgen/status", params = {"task_ids": task_ids}, headers = self.headers).json()
-                truth_values = [response[task_id] for task_id in task_ids]
-                print(truth_values)    ####debug print
-                if all(truth_value == "finished" for truth_value in truth_values):
-                    return True
-                elif any(truth_value == "failed" for truth_value in truth_values):
-                    return None
-                elif any(truth_value == "not_found" for truth_value in truth_values):
-                    return None
-                else:
-                    return False
-
-            except requests.exceptions.HTTPError as e:
-                if e == 404:
-                    print(f"Task {task_ids} not found.")
-                    return None
-                if e == 500:
-                    retries -= 1
-                    print(f"Internal server error. Retries remaining: {retries}")   
-
-        return None
+    def get_task_status(self, task_id: str) -> bool:
+        response = requests.get(f"{self.base_url}/demgen/task_status", params = {"task_id": task_id}, headers = self.headers)
+        return response.json()
     
-    def get_task_results(self, task_ids: list[str]) -> list[dict]:
-        retries = 10
-        while retries > 0:
-            try:
-                response = requests.get(f"{self.base_url}/demgen/result", params = {"task_ids": task_ids}, headers=self.headers).json()
-                if response == "null":
-                    return []
-                
-                return response
-            
-            except requests.exceptions.HTTPError as e:
-                if e == 404:
-                    print(f"Task {task_ids} not found.")
-                    return None
-                if e == 500:
-                    retries -= 1
-                    print(f"Internal server error. Retries remaining: {retries}")
-        return None
+    def get_task_results(self, task_id: str) -> dict:
+        response = requests.get(f"{self.base_url}/demgen/task_result", params = {"task_id": task_id}, headers=self.headers)
+        return response.json()
+    
+    def get_dataset(self, dataset_id: str) -> dict:
+        response = requests.get(f"{self.base_url}/demgen/dataset", params = {"dataset_id": dataset_id}, headers=self.headers)
+        return response.json()
 
-
-
-
+    

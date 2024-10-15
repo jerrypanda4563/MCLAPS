@@ -37,32 +37,28 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
         batch_states: dict = request_object["batch_states"]
         batch_states[demgen_task_id] = truth_value
         database.update_one(request_object_query, {"$set":{"batch_states": batch_states}})
-    
+
+    ######
+    timeout = 100
     while task_state is False:
-    
-        try:
-            task_state = demgen.get_task_status(list([demgen_task_id]))
+        try: 
+            task_state = demgen.get_task_status(demgen_task_id)
             if task_state == True:
-                demographic_profiles = demgen.get_task_results(list([demgen_task_id]))
                 break
-            elif task_state == False:
-                time.sleep(10)
-            elif task_state == None:
-                traceback.print_exc()
-                update_batch_state(False)
-                raise Exception(f"Demgen task failed") 
             else: 
-                traceback.print_exc()
-                update_batch_state(False)
-                raise Exception(f"Demgen task failed") 
-            
+                time.sleep(10)
+                timeout -= 1
+                continue
         except Exception as e:
-            #add function to delete the demgen task in demgen
-            # demgen_client.delete_task(demgen_task_id)
             traceback.print_exc()
             update_batch_state(False)
             raise Exception(f"Demgen task failed: {e}")
-    ###############################################
+        
+    demographic_profiles = demgen.get_task_results(demgen_task_id)
+
+    #####
+    
+
     try:
         simulation_instances = [simulation.Simulator(sim_id, survey=survey, demographic=demo, agent_params=agent_params) for demo in demographic_profiles]
     except Exception as e:
