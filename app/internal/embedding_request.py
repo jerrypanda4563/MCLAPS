@@ -29,14 +29,15 @@ def embed(text: str, embedding_model: Optional[str] = "text-embedding-3-small", 
     retries = 5
     while retries > 0:
 
-        max_sleep_time = 60
+        max_sleep_time = 70
         while rate_limiter.model_status(embedding_model) == False:
             if max_sleep_time >= 0: 
                 time.sleep(10)
                 max_sleep_time -= 10
                 continue
             else: 
-                warnings.warn(f"model counter {embedding_model} is fucked, ignoring")
+                warnings.warn(f"model counter {embedding_model} is fucked, resetting counter")
+                rate_limiter.reinitialize_counters()
                 break
 
         try:

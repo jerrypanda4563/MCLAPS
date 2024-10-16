@@ -69,6 +69,9 @@ class mclapsrlClient:
         }
         return mclapsrl_status
 
+    def reinitialize_counters(self) -> bool:
+        response = requests.get(f"{self.base_url}/clear_cache", headers = self.headers)
+        return response.json()
     #post
     def new_response(self, response) -> bool:
         #openai generator object parsed to dictionary
