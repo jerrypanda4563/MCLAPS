@@ -218,7 +218,7 @@ async def new_simulation(sim_param: SimulationParameters):
     except Exception as e:
         print(f"Demgen request failed: {e}")
         traceback.print_exc()
-        return False
+        raise HTTPException(status_code=500,detail=f'Failed to initiate demographic generation task: {e}.')
     
     demgen_task_ids = demgen_task["task_ids"] #list of task ids for each batch
     print(f"Demgen task ids: {demgen_task_ids}")
