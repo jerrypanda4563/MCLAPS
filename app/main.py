@@ -200,7 +200,7 @@ async def new_simulation(sim_param: SimulationParameters):
         raise HTTPException(status_code=500, detail="Error connecting to database.")
     
 
-    simulation_batch_size = 250
+    simulation_batch_size = sim_param.batch_size
     sim_id = str(uuid.uuid4())
     n_of_runs=sim_param.n_of_runs
     n_of_workers=sim_param.workers
@@ -224,7 +224,7 @@ async def new_simulation(sim_param: SimulationParameters):
     print(f"Demgen task ids: {demgen_task_ids}")
     
     #batching the simulation runs
-    batch_size = 250
+    batch_size = simulation_batch_size
     if n_of_runs > batch_size:
     
         n_of_batches = n_of_runs // batch_size

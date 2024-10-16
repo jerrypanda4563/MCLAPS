@@ -25,9 +25,17 @@ def model_response(query_message: str, assistant_message: str, system_message: s
     retries = 3
 
     while retries > 0:
+
+        max_sleep_time = 60
         while rate_limiter.model_status(model_name) == False:
-            time.sleep(10)
-            continue
+            if max_sleep_time >= 0: 
+                time.sleep(10)
+                max_sleep_time -= 10
+                continue
+            else: 
+                warnings.warn(f"model counter {model_name}is fucked, ignoring")
+                break
+
         try:
             completion = openai.ChatCompletion.create(
                     model = model_name,
