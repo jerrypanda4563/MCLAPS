@@ -136,7 +136,7 @@ class Agent:
             type_queried_memory = type(queried_memory)
             type_random_memory = type(random_memory)
             logger.info(f"current_memory: {type_current_memory}, queried_memory: {type_queried_memory}, random_memory: {type_random_memory}")
-            
+            logger.info(f"{random_memory}")
             self.st_memory = current_memory + queried_memory + random_memory
 
  
