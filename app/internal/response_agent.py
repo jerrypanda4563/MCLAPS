@@ -101,11 +101,11 @@ class Agent:
 
             else:
                 sampled_chunk = random.choice(self.lt_memory.DataChunks)
-                related_chunk_indices = sorted(enumerate(sampled_chunk.conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:round(self.memory_chunk_size/self.lt_memory_chunk_size)]
+                related_chunk_indices = sorted(enumerate(sampled_chunk.conjugate_vector.tolist()), key=lambda x: x[1], reverse=True)[0:min(round(self.memory_chunk_size/self.lt_memory_chunk_size), len(self.lt_memory.DataChunks))]
                 related_chunks = [self.lt_memory.DataChunks[index] for index, _ in related_chunk_indices]
                 related_strings = [chunk.string for chunk in related_chunks]
-                memory_strings = related_strings.extend([sampled_chunk.string])
-                return memory_strings
+                related_strings.extend([sampled_chunk.string])
+                return related_strings
         
     ###################
 
@@ -132,11 +132,6 @@ class Agent:
                     #generates random memory along with current memory, ignores query
                     queried_memory = []
             
-            type_current_memory = type(current_memory)
-            type_queried_memory = type(queried_memory)
-            type_random_memory = type(random_memory)
-            logger.info(f"current_memory: {type_current_memory}, queried_memory: {type_queried_memory}, random_memory: {type_random_memory}")
-            logger.info(f"{random_memory}")
             self.st_memory = current_memory + queried_memory + random_memory
 
  
@@ -144,10 +139,7 @@ class Agent:
                 self.restructure_memory(string = query_str)
 
         except Exception as e:
-            type_current_memory = type(current_memory)
-            type_queried_memory = type(queried_memory)
-            type_random_memory = type(random_memory)
-            logger.error(f"Error in constructing memory: {e}, current_memory: {type_current_memory}, queried_memory: {type_queried_memory}, random_memory: {type_random_memory}")
+            logger.error(f"Error in constructing st memory: {e}")
             self.st_memory = self.st_memory
         
     
@@ -172,7 +164,7 @@ class Agent:
         system_prompt = self.instruction + f"The current timestamp is {self.existence_date}"
         response = model_response(
             query_message = query, 
-            assistant_message=memory_prompt, 
+            assistant_message = memory_prompt, 
             system_message = system_prompt,
             model_name = self.llm_model,
             json_mode = self.json_mode,
@@ -188,8 +180,9 @@ class Agent:
     def chat(self, query:str) -> str:
         self.construct_st_memory(query)   #changes system message 
         response: str = self.llm_request(query)
-        resoponse_chunked: list[str] = chunking.chunk_string(response, chunk_size = self.memory_chunk_size)
-        self.st_memory.extend(resoponse_chunked)
+        response_chunked: list[str] = chunking.chunk_string(response, chunk_size = self.memory_chunk_size)
+        self.st_memory.extend(query)
+        self.st_memory.extend(response_chunked)
         if self.st_memory_length() > self.st_memory_capacity:
             self.restructure_memory(query)
         return response
