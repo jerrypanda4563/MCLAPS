@@ -20,12 +20,14 @@ import gc
 from app.internal.embedding_request import embed
 from app.internal.model_request import model_response
 import warnings
+import logging
 
 openai.api_key = settings.OPEN_AI_KEY
 
 
 nlp = spacy.load("en_core_web_sm")      
 rate_limiter = mclapsrlClient()
+logger = logging.getLogger(__name__)
 
 
 #### note to self: new data str is only added when injecting under satisfied conditions or when restructuring memory
@@ -130,9 +132,14 @@ class Agent:
                     #generates random memory along with current memory, ignores query
                     queried_memory = []
             
-
-            self.st_memory = current_memory + queried_memory + random_memory
+            type_current_memory = type(current_memory)
+            type_queried_memory = type(queried_memory)
+            type_random_memory = type(random_memory)
+            logger.info(f"current_memory: {type_current_memory}, queried_memory: {type_queried_memory}, random_memory: {type_random_memory}")
             
+            self.st_memory = current_memory + queried_memory + random_memory
+
+ 
             if self.st_memory_length() > self.st_memory_capacity:
                 self.restructure_memory(string = query_str)
 
@@ -140,8 +147,7 @@ class Agent:
             type_current_memory = type(current_memory)
             type_queried_memory = type(queried_memory)
             type_random_memory = type(random_memory)
-            warnings.warn(f"Error in constructing memory: {e}, current_memory: {type_current_memory}, queried_memory: {type_queried_memory}, random_memory: {type_random_memory}")
-            traceback.print_exc()
+            logger.error(f"Error in constructing memory: {e}, current_memory: {type_current_memory}, queried_memory: {type_queried_memory}, random_memory: {type_random_memory}")
             self.st_memory = self.st_memory
         
     

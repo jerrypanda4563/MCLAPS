@@ -8,8 +8,10 @@ import numpy as np
 import time
 import traceback
 import warnings
+import logging
 
 rate_limiter = mclapsrl.mclapsrlClient()
+logger = logging.getLogger(__name__)
 
 openai.api_key = settings.OPEN_AI_KEY
 
@@ -36,7 +38,7 @@ def embed(text: str, embedding_model: Optional[str] = "text-embedding-3-small", 
                 max_sleep_time -= 10
                 continue
             else: 
-                warnings.warn(f"model counter {embedding_model} is fucked, resetting counter")
+                logger.error(f"model counter {embedding_model} is fucked, resetting counter")
                 rate_limiter.reinitialize_counters()
                 break
 
@@ -51,26 +53,26 @@ def embed(text: str, embedding_model: Optional[str] = "text-embedding-3-small", 
             return embedding
         
         except (OpenAIError, Timeout, ServiceUnavailableError, APIError) as e:
-            warnings.warn(f"server returned an error while embedding the text: {text}. {e}")
+            logger.error(f"server returned an error while embedding the text: {text}. {e}")
             traceback.print_exc()
             rate_limiter.model_break(embedding_model, 10)
             retries -= 1
             continue
         except RateLimitError as e:
-            warnings.warn(f"rate limit exceeded while embedding the text: {text}. {e}")
+            logger.error(f"rate limit exceeded while embedding the text: {text}. {e}")
             traceback.print_exc()
             rate_limiter.model_break(embedding_model, 60)
             retries -= 1
             continue
             
         except Exception as e:
-            warnings.warn(f"an exception occurred while embedding the text: {text}. {e}")
+            logger.error(f"an exception occurred while embedding the text: {text}. {e}")
             traceback.print_exc()
             rate_limiter.model_break(embedding_model, 10)
             retries -= 1
             continue
 
     else: 
-        warnings.warn(f"a zero vector was returned for the text: {text}")
+        logger.error(f"a zero vector was returned for the text: {text}")
         traceback.print_exc()
         return np.zeros(dimension) 
