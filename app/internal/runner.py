@@ -39,7 +39,7 @@ def run_simulation(sim_id: str, demgen_task_id: str, survey: Dict, agent_params:
         database.update_one(request_object_query, {"$set":{"batch_states": batch_states}})
 
     ######
-    timeout = 100
+    timeout = 50
     while task_state is False:
         try: 
             task_state = demgen.get_task_status(demgen_task_id)

@@ -19,6 +19,7 @@ from app.data_models import AgentParameters
 import gc
 from app.internal.embedding_request import embed
 from app.internal.model_request import model_response
+import warnings
 
 openai.api_key = settings.OPEN_AI_KEY
 
@@ -108,15 +109,16 @@ class Agent:
 
     def construct_st_memory(self, query_str: str) -> None:
         try:
+            #generate random memory based on agent temperature
             if random.random() < self.agent_temperature:
                 random_memory = self.random_memory()
             else:
                 random_memory = []
             
+
             current_memory = self.st_memory.copy()
             if len(self.st_memory) == 0:
                 queried_memory = self.lt_memory.query(query_str)
-                self.st_memory =current_memory + queried_memory + random_memory
             else:
                 #1-agent_temp/2 chance of querying memory
                 if random.random() > self.agent_temperature/2:
@@ -124,16 +126,21 @@ class Agent:
                         similarity_scores = list(executor.map(lambda x: self.evaluator(query_str, x), self.st_memory))
                     k = np.average(similarity_scores) #mean similarity to query
                     queried_memory = self.lt_memory.query(query_str, k)
-                    self.st_memory = current_memory + queried_memory + random_memory
                 else: 
                     #generates random memory along with current memory, ignores query
-                    self.st_memory = current_memory + random_memory
+                    queried_memory = []
+            
 
+            self.st_memory = current_memory + queried_memory + random_memory
+            
             if self.st_memory_length() > self.st_memory_capacity:
                 self.restructure_memory(string = query_str)
 
         except Exception as e:
-            print(f"Warning: Error in constructing memory: {e}")
+            type_current_memory = type(current_memory)
+            type_queried_memory = type(queried_memory)
+            type_random_memory = type(random_memory)
+            warnings.warn(f"Error in constructing memory: {e}, current_memory: {type_current_memory}, queried_memory: {type_queried_memory}, random_memory: {type_random_memory}")
             traceback.print_exc()
             self.st_memory = self.st_memory
         
