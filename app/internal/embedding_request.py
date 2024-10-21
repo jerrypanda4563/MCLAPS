@@ -54,25 +54,21 @@ def embed(text: str, embedding_model: Optional[str] = "text-embedding-3-small", 
         
         except (OpenAIError, Timeout, ServiceUnavailableError, APIError) as e:
             logger.error(f"server returned an error while embedding the text: {text}. {e}")
-            traceback.print_exc()
             rate_limiter.model_break(embedding_model, 10)
             retries -= 1
             continue
         except RateLimitError as e:
             logger.error(f"rate limit exceeded while embedding the text: {text}. {e}")
-            traceback.print_exc()
             rate_limiter.model_break(embedding_model, 60)
             retries -= 1
             continue
             
         except Exception as e:
             logger.error(f"an exception occurred while embedding the text: {text}. {e}")
-            traceback.print_exc()
             rate_limiter.model_break(embedding_model, 10)
             retries -= 1
             continue
 
     else: 
         logger.error(f"a zero vector was returned for the text: {text}")
-        traceback.print_exc()
         return np.zeros(dimension) 

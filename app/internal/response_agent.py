@@ -171,7 +171,26 @@ class Agent:
             temperature = self.model_temperature,
             response_length = self.max_output_length 
             )
+        
+        qr_pair = f"Query message:{query} \n Response:{response}"
+        
+        self.st_memory.append(qr_pair)
+        
+        reflection_prompt = f"Give a reason for your response: {response} to the query message: {query}"
+        reflection_statement =  model_response(
+        query_message = reflection_prompt, 
+        assistant_message = memory_prompt, 
+        system_message = system_prompt,
+        model_name = self.llm_model,
+        json_mode = False,
+        temperature = self.model_temperature,
+        response_length = round(self.max_output_length/2) 
+        )
+        reflection_chunked = chunking.chunk_string(reflection_statement, chunk_size = self.memory_chunk_size)
+        self.st_memory.extend(reflection_chunked)
+
         return response
+    
 
     
     
@@ -180,9 +199,6 @@ class Agent:
     def chat(self, query:str) -> str:
         self.construct_st_memory(query)   #changes system message 
         response: str = self.llm_request(query)
-        response_chunked: list[str] = chunking.chunk_string(response, chunk_size = self.memory_chunk_size)
-        self.st_memory.extend(query)
-        self.st_memory.extend(response_chunked)
         if self.st_memory_length() > self.st_memory_capacity:
             self.restructure_memory(query)
         return response

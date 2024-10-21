@@ -56,20 +56,17 @@ def model_response(query_message: str, assistant_message: str, system_message: s
             response = completion.choices[0].message.content
             return response
         except (OpenAIError, Timeout, ServiceUnavailableError, APIError) as e:
-            logger.error(f"server returned an error while processing query: {query_message}. {e}")
-            traceback.print_exc()
+            logger.error(f"server returned an error while processing query: {query_message}. {e}")           
             rate_limiter.model_break(model_name, 10)
             retries -= 1
             continue
         except RateLimitError as e:
             logger.error(f"rate limit exceeded while processing query: {query_message}. {e}")
-            traceback.print_exc()
             rate_limiter.model_break(model_name, 60)
             retries -= 1
             continue
         except Exception as e:
             logger.error(f"an exception occurred while processing query: {query_message}. {e}")
-            traceback.print_exc()
             rate_limiter.model_break(model_name, 10)
             retries -= 1
             continue

@@ -14,7 +14,9 @@ import json
 import openai.error
 import time
 import uuid
+import logging
 
+logger = logging.getLogger(__name__)
 
 
 #when an instance is ran, return a response_data json object containing responses and demographic data
@@ -87,10 +89,9 @@ class Simulator():
                     break
 
                 except (openai.error.ServiceUnavailableError, openai.error.Timeout, openai.error.RateLimitError) as e:
-                    print(f'OpenAI error in simulation run for simulator {self.simulator_id} (Attempt {i + 1}): for question {_+1}. {e}')
-                    traceback.print_exc()  
+                    logger.error(f'OpenAI error in simulation run for simulator {self.simulator_id} (Attempt {i + 1}): for question {_+1}. {e}')
             else:
-                print(f"Maximum retries reached for question: {json.dumps(schema)}. Skipping to next question.")
+                logger.error(f"Maximum retries reached for question: {json.dumps(schema)}. Skipping to next question.")
                 schema["answer"] = None
                 break
             #pushing to result object based on json mode
