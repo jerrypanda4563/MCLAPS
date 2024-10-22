@@ -167,6 +167,14 @@ class Agent:
             
 
     def llm_request(self, query: str):
+
+
+        qrr_object = {
+            "query": query,
+            "response": " ",
+            "reflection": " "
+        }
+        
         memory_prompt = "You recall the following pieces of information:\n" + '\n'.join(self.st_memory) 
         system_prompt = self.instruction + f"The current timestamp is {self.existence_date}"
         response = model_response(
@@ -178,36 +186,28 @@ class Agent:
             temperature = self.model_temperature,
             response_length = self.max_output_length 
             )
-        
-        qr_pair = f"Query message:{query} \n Response:{response}"
-        self.st_memory.append(qr_pair)
+        qrr_object["response"] = response
         
         reflection_prompt = f"Give a reason for your response: {response} to the query message: {query}"
-        
         reflection_statement =  model_response(
-        query_message = reflection_prompt, 
-        assistant_message = memory_prompt, 
-        system_message = system_prompt,
-        model_name = self.llm_model,
-        json_mode = False,
-        temperature = self.model_temperature,
-        response_length = round(self.max_output_length/2) 
-        )
-        
-        qrr_object = {
-            "query": query,
-            "response": response,
-            "reflection": reflection_statement
-        }
+            query_message = reflection_prompt, 
+            assistant_message = memory_prompt, 
+            system_message = system_prompt,
+            model_name = self.llm_model,
+            json_mode = False,
+            temperature = self.model_temperature,
+            response_length = round(self.max_output_length/2) 
+            )
+        qrr_object["reflection"] = reflection_statement
         
         db = mongo_config.database["agent_instances"]
 
         db.update_one({"_id": self.agent_id}, {"$push": {"qrr_iterations": qrr_object}})
-        logger.info(f"qrr iterations for agent {self.agent_id} have been updated")
         db.update_one({"_id": self.agent_id}, {"$push": {"st_memories": self.st_memory}})
-        logger.info(f"st memories for agent {self.agent_id} have been updated")
     
 
+        qr_pair = f"Query message:{query} \n Response:{response}"
+        self.st_memory.append(qr_pair)
         reflection_chunked = chunking.chunk_string(reflection_statement, chunk_size = self.memory_chunk_size)
         self.st_memory.extend(reflection_chunked)
 

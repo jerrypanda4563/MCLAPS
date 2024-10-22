@@ -53,8 +53,8 @@ def model_response(query_message: str, assistant_message: str, system_message: s
                     n=1  
                     )
             rate_limiter.new_response(completion)
-            response = completion.choices[0].message.content
-            return response
+            completion_string: str = completion.choices[0].message.content
+            return completion_string
         except (OpenAIError, Timeout, ServiceUnavailableError, APIError) as e:
             logger.error(f"server returned an error while processing query: {query_message}. {e}")           
             rate_limiter.model_break(model_name, 10)
