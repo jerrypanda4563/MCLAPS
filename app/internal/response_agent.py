@@ -9,6 +9,7 @@ import random
 import numpy as np
 import spacy
 from typing import List, Optional
+import time
 import openai
 from openai.error import OpenAIError, Timeout, ServiceUnavailableError, RateLimitError
 from sklearn.metrics.pairwise import cosine_similarity as cs
@@ -116,6 +117,7 @@ class Agent:
         
     ###################
 
+
     def construct_st_memory(self, query_str: str) -> None:
         try:
             #generate random memory based on agent temperature
@@ -166,6 +168,23 @@ class Agent:
         self.lt_memory.add_data_str(new_lt_memory_joined)
             
 
+    def update_instance(self, qrr: dict):
+        retries = 3
+        while retries > 0:
+            try:
+                db = mongo_config.database["agent_instances"]
+                db.update_one({"_id": self.agent_id}, {"$push": {"qrr_iterations": qrr}})
+                db.update_one({"_id": self.agent_id}, {"$push": {"st_memories": self.st_memory}})
+                break
+            except Exception as e:
+                logger.error(f"Error in updating agent instance: {e} for agent {self.agent_id}")
+                retries -= 1
+                time.sleep(10)
+                continue
+        else:
+            logger.error(f"Maximum retries reached for updating agent instance: {self.agent_id}")
+            return None
+
     def llm_request(self, query: str):
 
 
@@ -202,10 +221,7 @@ class Agent:
         logger.info(f"Reflection: {reflection_statement}")
         qrr_object["reflection"] = reflection_statement
         
-        db = mongo_config.database["agent_instances"]
-
-        db.update_one({"_id": self.agent_id}, {"$push": {"qrr_iterations": qrr_object}})
-        db.update_one({"_id": self.agent_id}, {"$push": {"st_memories": self.st_memory}})
+        self.update_instance(qrr_object)
     
 
         qr_pair = f"Query message:{query} \n Response:{response}"
