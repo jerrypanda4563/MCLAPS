@@ -193,7 +193,7 @@ class Agent:
             "reflection": " "
         }
         
-        memory_prompt = "You recall the following pieces of information:\n" + '\n'.join(self.st_memory) 
+        memory_prompt = "You recall the following pieces of information from memory: \n" + '\n'.join(self.st_memory) + "Consider these memories when responding to query if the memories are relevant." 
         system_prompt = self.instruction + f"The current timestamp is {self.existence_date}"
         response = model_response(
             query_message = query, 
