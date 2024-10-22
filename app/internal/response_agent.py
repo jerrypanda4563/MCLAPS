@@ -179,14 +179,13 @@ class Agent:
             except Exception as e:
                 logger.error(f"Error in updating agent instance: {e} for agent {self.agent_id}")
                 retries -= 1
-                time.sleep(10)
+                time.sleep(5)
                 continue
         else:
             logger.error(f"Maximum retries reached for updating agent instance: {self.agent_id}")
-            return None
+            pass
 
     def llm_request(self, query: str):
-
 
         qrr_object = {
             "query": query,
@@ -205,22 +204,23 @@ class Agent:
             temperature = self.model_temperature,
             response_length = self.max_output_length 
             )
-        logger.info(f"Response: {response}")
         qrr_object["response"] = response
         
-        reflection_prompt = f"Give a reason for your response: {response} to the query message: {query}"
+
+        reflection_prompt: str = f"Give a reason for why you responded the way you did to the most recent message."
+        reflection_memory: str = f"Your responded: {response} to the most recent message: {query}. You also recall the following pieces of information:\n" + '\n'.join(self.st_memory)
         reflection_statement =  model_response(
             query_message = reflection_prompt, 
-            assistant_message = memory_prompt, 
+            assistant_message = reflection_memory, 
             system_message = system_prompt,
             model_name = self.llm_model,
             json_mode = False,
             temperature = self.model_temperature,
             response_length = round(self.max_output_length/2) 
             )
-        logger.info(f"Reflection: {reflection_statement}")
         qrr_object["reflection"] = reflection_statement
         
+
         self.update_instance(qrr_object)
     
 

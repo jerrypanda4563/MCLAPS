@@ -48,6 +48,7 @@ def load_simulation_csv(sim_id: str, file_path: str) -> str:
         demographic_fields: list[str] = list(data["demographic_conditions"].keys())
         question_fields: list[str] = [iteration_question["question"] for iteration_question in iteration_questions]
 
+        column_names.append("agent_id")
         column_names.extend(demographic_fields)
         column_names.append("persona")
         column_names.extend(question_fields)
@@ -64,6 +65,8 @@ def load_simulation_csv(sim_id: str, file_path: str) -> str:
         # "response_data": []}
         for result in simulation_results:
             result_dict: dict = {}
+            agent_id_dict = {"agent_id": result["_id"]}
+            result_dict.update(agent_id_dict)
             demographic_dict: dict = result["demographic"]
             result_dict.update(demographic_dict)
             persona_dict:dict = {"persona": result["persona"]}
