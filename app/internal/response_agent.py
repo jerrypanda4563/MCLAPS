@@ -6,10 +6,7 @@ from app.internal import chunking
 from app import mongo_config
 import random
 
-import uuid
-import time
 import numpy as np
-import traceback
 import spacy
 from typing import List, Optional
 import openai

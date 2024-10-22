@@ -41,11 +41,14 @@ class Simulator():
         self.demographic: Dict = demographic["demographic"]
         self.persona: Dict = demographic["persona"]
 
-        self.simulator = response_agent.Agent(
-            agent_id = self.simulator_id,
-            instruction = initialization_prompt(self.demographic, self.persona), 
-            params = agent_params
-            )
+        self.simulator_instructions = initialization_prompt(self.demographic, self.persona)
+        self.simulator_params = agent_params
+
+        # self.simulator = response_agent.Agent(
+        #     agent_id = self.simulator_id,
+        #     instruction = initialization_prompt(self.demographic, self.persona), 
+        #     params = agent_params
+        #     )
         
         self.retry_policy = retries
         
@@ -58,6 +61,12 @@ class Simulator():
         
         database = self.initialize_database()
         
+        simulator = response_agent.Agent(
+            agent_id = self.simulator_id,
+            instruction = self.simulator_instructions,
+            params = self.simulator_params
+        )
+
         database["results"].insert_one({"_id": self.simulator_id,
                                   "request_id": self.request_id, 
                                   "demographic": self.demographic, 
@@ -67,7 +76,7 @@ class Simulator():
         request_object_query = {"_id": self.request_id}
 
         for context in self.survey_context:
-            self.simulator.inject_memory(context)
+            simulator.inject_memory(context)
         
         #iterating though generator object
         for _ in range(self.iterator.n_of_iter):
@@ -75,7 +84,7 @@ class Simulator():
             schema = self.iterator.iterations[_]
             for i in range(self.retry_policy):
                 try: 
-                    result = self.simulator.chat(current_iteration)
+                    result = simulator.chat(current_iteration)
                     if self.json_mode:
                         try:
                             response_json = json.loads(result)
