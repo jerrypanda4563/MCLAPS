@@ -68,14 +68,17 @@ class Agent:
         self.existence_date = params.existance_date
 
 
-        #qrr = query response reflection
-        self.instance_object = {
+        self.initialize_instance_object()
+
+    def initialize_instance_object(self) -> None:
+        instance_object = {
             "_id": self.agent_id,
-            "qrr_iterations": [],
+            "qrr_iterations": [],           #qrr = query response reflection
             "st_memories":[]
         }
-        self.db = mongo_config.database["agent_instances"]
-        self.db.insert_one(self.instance_object)
+        db = mongo_config.database["agent_instances"]
+        db.insert_one(instance_object)
+        logger.info(f"Agent {self.agent_id} has been initialized")
 
     #add limiter
     def embed_string(self, string:str) -> np.ndarray:
@@ -199,8 +202,14 @@ class Agent:
             "response": response,
             "reflection": reflection_statement
         }
-        self.db.update_one({"_id": self.agent_id}, {"$push": {"qrr_iterations": qrr_object}})
-        self.db.update_one({"_id": self.agent_id}, {"$push": {"st_memories": self.st_memory}})
+        
+        db = mongo_config.database["agent_instances"]
+
+        db.update_one({"_id": self.agent_id}, {"$push": {"qrr_iterations": qrr_object}})
+        logger.info(f"qrr iterations for agent {self.agent_id} have been updated")
+        db.update_one({"_id": self.agent_id}, {"$push": {"st_memories": self.st_memory}})
+        logger.info(f"st memories for agent {self.agent_id} have been updated")
+    
 
         reflection_chunked = chunking.chunk_string(reflection_statement, chunk_size = self.memory_chunk_size)
         self.st_memory.extend(reflection_chunked)
