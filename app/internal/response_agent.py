@@ -186,6 +186,7 @@ class Agent:
             temperature = self.model_temperature,
             response_length = self.max_output_length 
             )
+        logger.info(f"Response: {response}")
         qrr_object["response"] = response
         
         reflection_prompt = f"Give a reason for your response: {response} to the query message: {query}"
@@ -198,6 +199,7 @@ class Agent:
             temperature = self.model_temperature,
             response_length = round(self.max_output_length/2) 
             )
+        logger.info(f"Reflection: {reflection_statement}")
         qrr_object["reflection"] = reflection_statement
         
         db = mongo_config.database["agent_instances"]
