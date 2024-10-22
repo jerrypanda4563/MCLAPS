@@ -42,7 +42,7 @@ class Simulator():
         self.persona: Dict = demographic["persona"]
 
         self.simulator = response_agent.Agent(
-            ##replace with initialization prompt
+            agent_id = self.simulator_id,
             instruction = initialization_prompt(self.demographic, self.persona), 
             params = agent_params
             )

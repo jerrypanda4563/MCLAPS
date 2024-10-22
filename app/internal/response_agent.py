@@ -3,6 +3,7 @@ from app.internal.tokenizer import count_tokens
 from app.api_clients.mclapsrl import mclapsrlClient
 from app import settings
 from app.internal import chunking
+from app import mongo_config
 import random
 
 import uuid
@@ -34,10 +35,9 @@ logger = logging.getLogger(__name__)
 
 class Agent:
 
-    def __init__(self, instruction:str, params: AgentParameters):
-        ######
-        # self.agent_id = str(uuid.uuid4()) #unique id for agent
-        ######
+    def __init__(self, agent_id:str, instruction:str, params: AgentParameters):
+
+        self.agent_id = agent_id #generated within simulation instance
 
         self.lt_memory = agent_data.AgentData(
             memory_limit = params.memory_limit, 
@@ -53,8 +53,6 @@ class Agent:
         self.instruction:str = instruction
         self.lt_memory_chunk_size = round(params.chunk_size/(params.reconstruction_top_n + 1))
 
-       
-
         self.st_memory_capacity: int = params.memory_context_length
         self.max_output_length: int = params.max_output_length
         self.lt_memory_trigger_length: int = params.lt_memory_trigger_length   # n. of tokens in string required to force trigger lt_memory storage rather than st_memory
@@ -68,7 +66,16 @@ class Agent:
         self.agent_temperature = params.agent_temperature    # for query randomness
         self.json_mode = params.json_mode
         self.existence_date = params.existance_date
-    
+
+
+        #qrr = query response reflection
+        self.instance_object = {
+            "_id": self.agent_id,
+            "qrr_iterations": [],
+            "st_memories":[]
+        }
+        self.db = mongo_config.database["agent_instances"]
+        self.db.insert_one(self.instance_object)
 
     #add limiter
     def embed_string(self, string:str) -> np.ndarray:
@@ -173,10 +180,10 @@ class Agent:
             )
         
         qr_pair = f"Query message:{query} \n Response:{response}"
-        
         self.st_memory.append(qr_pair)
         
         reflection_prompt = f"Give a reason for your response: {response} to the query message: {query}"
+        
         reflection_statement =  model_response(
         query_message = reflection_prompt, 
         assistant_message = memory_prompt, 
@@ -186,6 +193,15 @@ class Agent:
         temperature = self.model_temperature,
         response_length = round(self.max_output_length/2) 
         )
+        
+        qrr_object = {
+            "query": query,
+            "response": response,
+            "reflection": reflection_statement
+        }
+        self.db.update_one({"_id": self.agent_id}, {"$push": {"qrr_iterations": qrr_object}})
+        self.db.update_one({"_id": self.agent_id}, {"$push": {"st_memories": self.st_memory}})
+
         reflection_chunked = chunking.chunk_string(reflection_statement, chunk_size = self.memory_chunk_size)
         self.st_memory.extend(reflection_chunked)
 

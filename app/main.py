@@ -208,7 +208,7 @@ async def new_simulation(sim_param: SimulationParameters):
     demographic_params=sim_param.demographic_params
     agent_params=sim_param.agent_params
     survey_object: dict = survey_params.dict()
-
+    
 
     #############send demgen request here
     demgen = MclapsDemgenClient()
